@@ -4,9 +4,9 @@
 # Tests login page, authentication, and SSRS endpoints.
 
 param(
-    [string]$LoginUrl = 'http://localhost:8080/Logon.aspx',
-    [string]$ReportServerUrl = 'http://vwmazbp360test/ReportServer',
-    [string]$ReportsUrl = 'http://vwmazbp360test/Reports',
+    [string]$LoginUrl = 'http://vmlenovo/ReportServer/logon.aspx',
+    [string]$ReportServerUrl = 'http://vmlenovo/ReportServer',
+    [string]$ReportsUrl = 'http://vmlenovo/Reports',
     [string]$TestUser = 'testuser',
     [string]$TestPassword = 'Test@123',
     [switch]$SkipAuthTest,
@@ -145,16 +145,25 @@ if (-not $SkipAuthTest) {
         # Create session to maintain cookies
         $session = New-Object Microsoft.PowerShell.Commands.WebRequestSession
         
-        # POST login credentials
+        # GET login page first to obtain ViewState tokens
+        $getResponse = Invoke-WebRequest -Uri $LoginUrl -WebSession $session -UseBasicParsing
+        $viewState          = if ($getResponse.Content -match 'name="__VIEWSTATE".*?value="([^"]*)"')          { $matches[1] } else { '' }
+        $viewStateGenerator = if ($getResponse.Content -match 'name="__VIEWSTATEGENERATOR".*?value="([^"]*)"') { $matches[1] } else { '' }
+        $eventValidation    = if ($getResponse.Content -match 'name="__EVENTVALIDATION".*?value="([^"]*)"')    { $matches[1] } else { '' }
+
         $loginBody = @{
-            UserName = $TestUser
-            Password = $TestPassword
+            '__VIEWSTATE'          = $viewState
+            '__VIEWSTATEGENERATOR' = $viewStateGenerator
+            '__EVENTVALIDATION'    = $eventValidation
+            'TxtUser'              = $TestUser
+            'TxtPwd'               = $TestPassword
+            'BtnLogon'             = 'Logon'
         }
-        
+
         $loginResponse = Invoke-WebRequest -Uri $LoginUrl -Method POST -Body $loginBody -WebSession $session -UseBasicParsing -MaximumRedirection 0 -ErrorAction SilentlyContinue
-        
+
         # Check for authentication cookie
-        $authCookie = $session.Cookies.GetCookies($LoginUrl) | Where-Object { $_.Name -match 'AuthCookie|FormsAuth|\.ASPXAUTH' }
+        $authCookie = $session.Cookies.GetCookies($LoginUrl) | Where-Object { $_.Name -match 'sqlAuthCookie|AuthCookie|FormsAuth|\.ASPXAUTH' }
         
         if ($authCookie) {
             Write-Host "  Authentication cookie found: $($authCookie.Name)" -ForegroundColor Green
@@ -207,27 +216,6 @@ if ($service) {
 else {
     Write-Host " Not Found" -ForegroundColor Red
     $allPassed = $false
-}
-
-# Check IIS Login Site
-Write-Host "IIS Login Site:" -NoNewline
-try {
-    Import-Module WebAdministration -ErrorAction Stop
-    $site = Get-Website -Name SSRSLogin -ErrorAction SilentlyContinue
-    if ($site) {
-        $color = if ($site.State -eq 'Started') { 'Green' } else { 'Red' }
-        Write-Host " $($site.State)" -ForegroundColor $color
-        if ($site.State -ne 'Started') {
-            $allPassed = $false
-        }
-    }
-    else {
-        Write-Host " Not Found" -ForegroundColor Red
-        $allPassed = $false
-    }
-}
-catch {
-    Write-Host " Unable to check (WebAdministration module)" -ForegroundColor Yellow
 }
 
 Write-Host ''

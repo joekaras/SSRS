@@ -4,9 +4,7 @@
 
 param(
     [ValidateSet('Debug', 'Release')]
-    [string]$Configuration = 'Debug',
-
-    [string]$TargetFramework = 'net48'
+    [string]$Configuration = 'Debug'
 )
 
 Set-StrictMode -Version Latest
@@ -16,7 +14,6 @@ $projectPath = Join-Path $repoRoot 'CustomSecurity.csproj'
 
 Write-Host "Building CustomSecurity extension..." -ForegroundColor Cyan
 Write-Host "Configuration: $Configuration" -ForegroundColor Gray
-Write-Host "Target framework: $TargetFramework" -ForegroundColor Gray
 
 if (-not (Test-Path $projectPath)) {
     Write-Error "Project file not found: $projectPath"
@@ -51,7 +48,7 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Host "Build succeeded." -ForegroundColor Green
 
-$outputPath = Join-Path $repoRoot "bin\$Configuration\$TargetFramework\Microsoft.ReportingServices.CustomSecurity.dll"
+$outputPath = Join-Path $repoRoot "bin\$Configuration\Microsoft.Samples.ReportingServices.CustomSecurity.dll"
 if (Test-Path $outputPath) {
     $fileInfo = Get-Item $outputPath
     Write-Host "Output: $outputPath" -ForegroundColor Cyan

@@ -21,31 +21,36 @@ function New-HexString {
 }
 
 $validationKey = New-HexString -ByteLength 64  # 128 hex chars
-$decryptionKey = New-HexString -ByteLength 16  # 32 hex chars
+$decryptionKey = New-HexString -ByteLength 32  # 64 hex chars
 
-$machineKeyXml = @"
-<machineKey
-  validationKey="$validationKey"
-  decryptionKey="$decryptionKey"
-  validation="HMACSHA256"
-  decryption="AES" />
+$webConfigXml = @"
+<!-- web.config and RSPortal.exe.config: inside <system.web> (camelCase attributes) -->
+<machineKey validationKey="$validationKey" decryptionKey="$decryptionKey" validation="AES" decryption="AES" />
+"@
+
+$rsConfigXml = @"
+<!-- rsreportserver.config: under <Configuration> root (Pascal case attributes) -->
+<MachineKey ValidationKey="$validationKey" DecryptionKey="$decryptionKey" Validation="AES" Decryption="AES" />
 "@
 
 Write-Host '================================================' -ForegroundColor Green
 Write-Host 'Machine key generated' -ForegroundColor Green
 Write-Host '================================================' -ForegroundColor Green
 Write-Host ''
-Write-Host $machineKeyXml -ForegroundColor Yellow
+Write-Host $webConfigXml -ForegroundColor Yellow
+Write-Host $rsConfigXml -ForegroundColor Yellow
 Write-Host ''
-Write-Host 'Apply this exact machineKey to all three configs:' -ForegroundColor Cyan
-Write-Host '1. Login page web.config (repo root)' -ForegroundColor White
-Write-Host '2. ReportServer web.config' -ForegroundColor White
-Write-Host '3. rsreportserver.config' -ForegroundColor White
+Write-Host 'Apply identical keys to all three SSRS config files:' -ForegroundColor Cyan
+Write-Host '  1. ReportServer\rsreportserver.config  (Pascal case, under <Configuration>)' -ForegroundColor White
+Write-Host '  2. ReportServer\web.config             (camelCase, inside <system.web>)' -ForegroundColor White
+Write-Host '  3. Portal\RSPortal.exe.config          (camelCase, inside <system.web>)' -ForegroundColor White
 Write-Host ''
-Write-Host 'The values must be identical in all three files.' -ForegroundColor Red
+Write-Host 'Keys must be IDENTICAL in all three files or portal returns HTTP 500.' -ForegroundColor Red
 Write-Host '================================================' -ForegroundColor Green
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$outFile = Join-Path $repoRoot 'MachineKey.txt'
-$machineKeyXml | Out-File -FilePath $outFile -Encoding UTF8
-Write-Host "Machine key saved to: $outFile" -ForegroundColor Green
+$backupsDir = Join-Path $repoRoot 'backups'
+if (-not (Test-Path $backupsDir)) { New-Item -ItemType Directory -Path $backupsDir -Force | Out-Null }
+$outFile = Join-Path $backupsDir "MachineKey_$(Get-Date -Format 'yyyy-MM-dd_HH-mm-ss').txt"
+"$webConfigXml`n$rsConfigXml" | Out-File -FilePath $outFile -Encoding UTF8
+Write-Host "Keys saved to: $outFile" -ForegroundColor Green

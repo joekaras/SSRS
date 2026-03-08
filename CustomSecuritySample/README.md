@@ -167,17 +167,53 @@ This will deny unauthenticated users the right to access the report server. The 
 
 Using Forms authentication requires that all report server processes can access the authentication cookie. This involves configuring a machine key and decryption algorithm - a familiar step for those who had previously setup SSRS to work in scale-out environments.
 
-Generate and add ```<MachineKey>``` under ```<Configuration>``` in your RSReportServer.config file. 
+Generate and add ```<MachineKey>``` under ```<Configuration>``` in your RSReportServer.config file.
 
 ```xml
 <MachineKey ValidationKey="[YOUR KEY]" DecryptionKey="[YOUR KEY]" Validation="AES" Decryption="AES" />
-``` 
+```
 
 **Check the casing of the attributes, it should be Pascal Casing as the example above**
 
-**There is not need for a ```<system.web>``` entry**
+**There is no need for a ```<system.web>``` entry in rsreportserver.config**
 
-You should use a validation key specific for you deployment, there are several tools to generate the keys such as Internet Information Services Manager (IIS)
+You should use a validation key specific for your deployment. Generate one using IIS Manager (Server node → Machine Key feature) or PowerShell:
+```powershell
+[System.Web.Security.MachineKeySection]::GenerateKey(64)
+```
+
+### SSRS 2019 CRITICAL: RSPortal.exe.config MachineKey
+
+**This step is not documented in the original sample but is required for SSRS 2016+.**
+
+RSPortal (the web portal) runs as a separate OWIN process (`RSPortal.exe`) and decrypts the Forms Authentication cookie using `FormsAuthentication.Decrypt`. It reads its MachineKey from `<install>\Portal\RSPortal.exe.config` — **not** from `web.config`.
+
+If `RSPortal.exe.config` does not have an explicit MachineKey, the portal uses an auto-generated key and cannot decrypt the cookie set by `logon.aspx`. The result is HTTP 500 with error:
+
+```
+System.Web.HttpException: Unable to validate data.
+   at System.Web.Security.FormsAuthentication.Decrypt(String encryptedTicket)
+   at Microsoft.BIServer.Owin.Common.Middleware.CustomAuthenticationMiddleware.CreateRequestContextFromCookie
+```
+
+**Fix**: Add the same `<machineKey>` to `RSPortal.exe.config` inside a `<system.web>` element:
+
+```xml
+<configuration>
+  <startup useLegacyV2RuntimeActivationPolicy="true">
+    <supportedRuntime version="v4.0" sku=".NETFramework,Version=v4.5" />
+  </startup>
+  <system.web>
+    <machineKey validationKey="[YOUR VALIDATION KEY]" decryptionKey="[YOUR DECRYPTION KEY]" validation="AES" decryption="AES" />
+  </system.web>
+  <!-- ... rest of config ... -->
+</configuration>
+```
+
+The MachineKey values must be **identical** across all three files:
+- `ReportServer\rsreportserver.config` (`<MachineKey>` under `<Configuration>`, Pascal case)
+- `ReportServer\web.config` (`<machineKey>` inside `<system.web>`, camelCase attributes)
+- `Portal\RSPortal.exe.config` (`<machineKey>` inside `<system.web>`, camelCase attributes)
 
 ## Step 5: Configure Passthrough cookies
 
@@ -193,6 +229,62 @@ In the rsreportserver.config file add following under ```<UI>```
    </CustomAuthenticationUI>
 </UI>
 ``` 
+
+## Step 6 (SSRS 2019): File Permissions for Service Account
+
+RSHostingService rewrites `web.config` and `rssrvpolicy.config` at startup to sync the MachineKey from `rsreportserver.config`. The service account needs **Modify** permission on both files, or startup will log `UnauthorizedAccessException` and MachineKey sync will fail.
+
+> **Important for SSRS 2019**: The service runs as the configured Windows account (e.g., `DOMAIN\ssrssvc`), **not** as the virtual account `NT SERVICE\SQLServerReportingServices`. Check Services → SQLServerReportingServices → Log On to find the actual account.
+
+Grant Modify using PowerShell (run as Administrator):
+```powershell
+$account = "VMLENOVO\ssrssvc"   # replace with your service account
+$rsDir = "C:\Program Files\Microsoft SQL Server Reporting Services\SSRS\ReportServer"
+
+foreach ($file in @("web.config", "rssrvpolicy.config")) {
+    $acl = Get-Acl "$rsDir\$file"
+    $rule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+        $account, "Modify", "Allow")
+    $acl.SetAccessRule($rule)
+    Set-Acl "$rsDir\$file" $acl
+}
+```
+
+## Step 7 (SSRS 2019): UserAccounts Database Permissions
+
+The authentication extension connects to the `UserAccounts` database using Integrated Security, running as the SSRS service account. That account must be a database user with EXECUTE rights on the stored procedures.
+
+Run in SSMS against the `UserAccounts` database:
+```sql
+-- Replace with your actual service account
+CREATE USER [VMLENOVO\ssrssvc] FOR LOGIN [VMLENOVO\ssrssvc];
+GRANT EXECUTE ON dbo.LookupUser   TO [VMLENOVO\ssrssvc];
+GRANT EXECUTE ON dbo.RegisterUser TO [VMLENOVO\ssrssvc];
+```
+
+Verify the account has a SQL Server login first:
+```sql
+-- Run in master
+SELECT name, type_desc FROM sys.server_principals WHERE name = 'VMLENOVO\ssrssvc';
+```
+
+## Step 8: Restart SSRS and Verify
+
+After all configuration changes, restart the service:
+```powershell
+Restart-Service SQLServerReportingServices
+```
+
+Then navigate to `http://<server>/Reports` and log in with a user registered in the UserAccounts database.
+
+To register users, use the included script:
+```powershell
+# Create default test users (testuser/Test@123, admin/Admin@123, report_viewer/Viewer@123)
+.\scripts\Setup-Users.ps1 -CreateTestUsers -Integrated
+
+# Register a single user
+.\scripts\Setup-Users.ps1 -UserName "jdoe" -Password "Pass@123" -Integrated
+```
 
 # Automatic configuration of the sample
 

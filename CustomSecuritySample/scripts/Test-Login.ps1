@@ -3,8 +3,8 @@
 # Tests actual login functionality with test users
 
 param(
-    [string]$LoginUrl = 'http://localhost:8080/Logon.aspx',
-    [string]$ReportServerUrl = 'http://vwmazbp360test/ReportServer',
+    [string]$LoginUrl = 'http://vmlenovo/ReportServer/logon.aspx',
+    [string]$ReportServerUrl = 'http://vmlenovo/ReportServer',
     [switch]$Verbose
 )
 
@@ -93,8 +93,8 @@ foreach ($user in $testUsers) {
         
         # Check for authentication cookie
         $allCookies = $session.Cookies.GetCookies($LoginUrl)
-        $authCookie = $allCookies | Where-Object { 
-            $_.Name -match 'AuthCookie|FormsAuth|\.ASPXAUTH|ASP\.NET_SessionId' 
+        $authCookie = $allCookies | Where-Object {
+            $_.Name -match 'sqlAuthCookie|AuthCookie|FormsAuth|\.ASPXAUTH'
         }
         
         if ($authCookie) {
@@ -218,6 +218,9 @@ try {
             $_.Name -match 'AuthCookie|FormsAuth|\.ASPXAUTH' 
         }
         
+        $authCookie = $session.Cookies.GetCookies($LoginUrl) | Where-Object {
+            $_.Name -match 'sqlAuthCookie|AuthCookie|FormsAuth|\.ASPXAUTH'
+        }
         if ($authCookie) {
             Write-Host "  Status: WARNING - Invalid login succeeded!" -ForegroundColor Red
             Write-Host "  Result: FAIL - Security issue: bad credentials accepted" -ForegroundColor Red

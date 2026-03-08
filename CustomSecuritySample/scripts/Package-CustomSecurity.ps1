@@ -11,23 +11,26 @@
 #   <OutputDir>\CustomSecurity-v<Version>-<Date>.zip
 #
 # ZIP STRUCTURE:
-#   Deploy-Production.ps1         <- entry point for ops
+#   Deploy-CustomSecurity.ps1     <- entry point
+#   Configure-CustomSecurity.ps1
 #   Rollback-CustomSecurity.ps1
+#   Backup-Config.ps1
+#   Setup-Users.ps1
 #   SmokeTest-Logon.ps1
+#   Test-FormsAuth.ps1
+#   Test-Login.ps1
+#   Test-SSRSEndpoints.ps1
 #   Generate-MachineKeys.ps1
+#   Set-Logging.ps1
 #   bin\
-#     Microsoft.ReportingServices.CustomSecurity.dll
-#     Microsoft.ReportingServices.CustomSecurity.dll.config
-#     Serilog.dll, Serilog.Sinks.File.dll, System.*.dll, ...
+#     Microsoft.Samples.ReportingServices.CustomSecurity.dll
+#     Microsoft.Samples.ReportingServices.CustomSecurity.pdb
 #   web\
 #     Logon.aspx
-#     web.config
 #     App_LocalResources\
-#       Logon.aspx.resx
-#   Configuration\
-#     rsreportserver.config.template
-#     web.config.reportserver.template
-#     rssrvpolicy.config.template
+#   Setup\
+#     CreateUserStore.sql
+#     RestoreDatabase.sql
 
 param(
     # Semantic version stamped onto the zip filename.
@@ -42,8 +45,8 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $repoRoot     = Split-Path -Parent $PSScriptRoot
-$buildOutput  = Join-Path $repoRoot 'bin\Release\net48'
-$dllName      = 'Microsoft.ReportingServices.CustomSecurity.dll'
+$buildOutput  = Join-Path $repoRoot 'bin\Release'
+$dllName      = 'Microsoft.Samples.ReportingServices.CustomSecurity.dll'
 $dllPath      = Join-Path $buildOutput $dllName
 
 # ── Validate build output ──────────────────────────────────────────────────
@@ -103,10 +106,17 @@ function StageDir {
 Write-Host '[1/4] Staging scripts' -ForegroundColor Yellow
 
 $scripts = @(
-    'Deploy-Production.ps1'
+    'Deploy-CustomSecurity.ps1'
+    'Configure-CustomSecurity.ps1'
     'Rollback-CustomSecurity.ps1'
+    'Backup-Config.ps1'
+    'Setup-Users.ps1'
     'SmokeTest-Logon.ps1'
+    'Test-FormsAuth.ps1'
+    'Test-Login.ps1'
+    'Test-SSRSEndpoints.ps1'
     'Generate-MachineKeys.ps1'
+    'Set-Logging.ps1'
 )
 foreach ($s in $scripts) {
     $src = Join-Path $PSScriptRoot $s
@@ -136,11 +146,11 @@ if (Test-Path $dllConfig) {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Stage: Login site web files -> web\
+# Stage: ReportServer web files -> web\
 # ─────────────────────────────────────────────────────────────────────────────
-Write-Host '[3/4] Staging login site files' -ForegroundColor Yellow
+Write-Host '[3/4] Staging ReportServer web files' -ForegroundColor Yellow
 
-$webFiles = @('Logon.aspx', 'web.config')
+$webFiles = @('Logon.aspx')
 foreach ($wf in $webFiles) {
     $src = Join-Path $repoRoot $wf
     if (Test-Path $src) {
@@ -156,21 +166,17 @@ if (Test-Path $localResources) {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Stage: Configuration templates -> Configuration\
+# Stage: Setup SQL scripts -> Setup\
 # ─────────────────────────────────────────────────────────────────────────────
-Write-Host '[4/4] Staging configuration templates' -ForegroundColor Yellow
+Write-Host '[4/4] Staging setup SQL scripts' -ForegroundColor Yellow
 
-$configTemplates = @(
-    'rsreportserver.config.template'
-    'web.config.reportserver.template'
-    'rssrvpolicy.config.template'
-)
-foreach ($tpl in $configTemplates) {
-    $src = Join-Path $repoRoot "Configuration\$tpl"
+$setupDir = Join-Path $repoRoot 'Setup'
+foreach ($sql in @('CreateUserStore.sql', 'RestoreDatabase.sql')) {
+    $src = Join-Path $setupDir $sql
     if (Test-Path $src) {
-        Stage $src "Configuration\$tpl"
+        Stage $src "Setup\$sql"
     } else {
-        Write-Warning "Template not found, skipping: $tpl"
+        Write-Warning "SQL script not found, skipping: $sql"
     }
 }
 
@@ -194,11 +200,9 @@ Write-Host "  File    : $zipPath" -ForegroundColor Green
 Write-Host "  Size    : $([math]::Round($zipInfo.Length / 1MB, 2)) MB" -ForegroundColor Green
 Write-Host '================================================' -ForegroundColor Green
 Write-Host ''
-Write-Host 'To deploy on the production server:' -ForegroundColor Cyan
+Write-Host 'To deploy on the target server:' -ForegroundColor Cyan
 Write-Host '  1. Copy the zip to the target server' -ForegroundColor White
 Write-Host '  2. Extract it (e.g. to C:\Deploy\CustomSecurity)' -ForegroundColor White
 Write-Host '  3. Open Windows PowerShell 5.1 as Administrator' -ForegroundColor White
-Write-Host "  4. cd C:\Deploy\CustomSecurity" -ForegroundColor White
-Write-Host '  5. .\Deploy-Production.ps1 -SqlServer "SQLHOST\INSTANCE"' -ForegroundColor White
-Write-Host '     # Or with SQL auth:' -ForegroundColor DarkGray
-Write-Host '     .\Deploy-Production.ps1 -SqlServer "SQLHOST" -SqlUser "ssrs_svc" -SqlPassword "S3cur3!"' -ForegroundColor DarkGray
+Write-Host '  4. cd C:\Deploy\CustomSecurity' -ForegroundColor White
+Write-Host '  5. .\Deploy-CustomSecurity.ps1 -ServiceAccount "DOMAIN\ssrssvc"' -ForegroundColor White

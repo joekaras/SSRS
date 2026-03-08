@@ -4,24 +4,76 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-.NET Framework 4.8 · ASP.NET Web Forms · IIS · SSRS 2019 Native Mode · Forms Authentication
+.NET Framework 4.8 · SSRS 2019 Native Mode · Custom Security Extension · Forms Authentication
 
-This repository is currently a **prompt engineering library** for building a secure SSRS report portal. No application code exists yet — the `prompts/` folder contains detailed design prompts organized by concern, and `skills/` contains the engineering review gate.
+This repository contains a **deployed SSRS 2019 Custom Security Extension** (Forms Authentication) based on the Microsoft sample, customized for production use on `VMLENOVO`. The `CustomSecuritySample/` folder is the active codebase. The `prompts/` folder contains design prompts for future portal work.
+
+### Deployed Environment
+
+- **Host**: `VMLENOVO` (Windows Server, IIS)
+- **SSRS install**: `C:\Program Files\Microsoft SQL Server Reporting Services\SSRS\`
+- **Service account**: `VMLENOVO\ssrssvc` (runs both RSHostingService and SQL Server)
+- **Portal URL**: `http://vmlenovo/Reports`
+- **ReportServer URL**: `http://vmlenovo/ReportServer`
+- **User store**: SQL Server `UserAccounts` database (localhost, Integrated Security)
+- **Auth cookie**: `sqlAuthCookie` (Forms Authentication, 60-min timeout)
 
 ## Architecture Overview
 
-**Flow**: User → App (Forms Auth) → `/reportview.aspx?reportId=N` → server checks authz, builds URL → iframe renders via `/ssrs/...` → IIS ARR proxies to SSRS with Basic Auth header injection.
+**Auth flow**: Browser → `logon.aspx` (ReportServer) → FormsAuth cookie (`sqlAuthCookie`) → RSPortal decrypts cookie via `FormsAuthentication.Decrypt` → portal renders reports.
 
-**Data model**: `Users ← UserRoles → Roles → RoleReports → Reports → ReportParameters` + `ReportViewAudit` for audit logging.
+**Extension components**:
+- `AuthenticationExtension.cs` — implements `IAuthenticationExtension2`; validates credentials against `UserAccounts.LookupUser` stored procedure
+- `Authorization.cs` — implements `IAuthorizationExtension`; admin configured via `rsreportserver.config`
+- `AuthenticationUtilities.cs` — SHA1+salt password hashing; connection string from `Properties.Settings.Default.Database_ConnectionString`
 
-**Key patterns**:
-- Auth: `FormsAuthentication` with SQL-backed roles (`users → roles → reports`)
-- Proxy: IIS ARR + URL Rewrite at `/ssrs/*` → SSRS ReportServer
-- Upstream SSRS auth: Basic Authentication with dedicated service account
-- URL construction: always via `SsrsUrlBuilder` class
-- Audit: `ReportViewAudit` table (userId, reportId, timestamp, clientIP, parametersHash)
+**User store**: `UserAccounts` DB → `Users` table → `LookupUser` / `RegisterUser` stored procs.
+Password hashing: SHA1(password + Base64Salt), stored as uppercase hex.
 
-**Environment split**: Dev/QA share Windows domain with SSRS (Windows or Basic auth); Prod does not (must use Basic auth).
+**Key config files**:
+
+| File | Purpose |
+|------|---------|
+| `ReportServer\rsreportserver.config` | Auth extension registration, MachineKey, PassThroughCookies |
+| `ReportServer\web.config` | Forms Auth mode, cookie name, MachineKey (must match rsreportserver.config) |
+| `Portal\RSPortal.exe.config` | MachineKey for RSPortal's FormsAuthentication.Decrypt (CRITICAL — must match) |
+| `ReportServer\rssrvpolicy.config` | FullTrust code group for the custom security DLL |
+
+## Critical: MachineKey Must Be Identical in All Three Places
+
+RSPortal runs as a separate OWIN process and calls `FormsAuthentication.Decrypt` using its own `RSPortal.exe.config`. If the MachineKey in `RSPortal.exe.config` does not match `web.config` and `rsreportserver.config`, the portal returns HTTP 500 with "Unable to validate data."
+
+All three files must contain:
+```xml
+<machineKey validationKey="D549EC24E7C65C59C6486CCC68E7990C26D7812C62151F015A6F5B7224DBDB4D26478B8012305BDF5DCB1F280AB8E747B85CDD7E71FF23E85BFCB3EB0973C47F" decryptionKey="F3AF0D7C6EBEB09B0AB332DB91818F05F70746750CBDD43E96E3444F888510AA" validation="AES" decryption="AES" />
+```
+
+In `rsreportserver.config` the element uses Pascal case (`<MachineKey>`) under `<Configuration>` (not `<system.web>`).
+
+## Service Account Permissions (VMLENOVO\ssrssvc)
+
+RSHostingService runs as `VMLENOVO\ssrssvc` (NOT the virtual `NT SERVICE\SQLServerReportingServices`). This account needs:
+
+1. **Modify** on `ReportServer\web.config` — RSHostingService rewrites it at startup to sync MachineKey
+2. **Modify** on `ReportServer\rssrvpolicy.config` — same startup sync
+3. **SQL login** in `UserAccounts` DB with `EXECUTE` on `LookupUser` and `RegisterUser`
+
+## Logon.aspx Form Field Names
+
+The correct ASP.NET control IDs (required for any test scripts or automation):
+- Username field: `TxtUser`
+- Password field: `TxtPwd`
+- Login button: `BtnLogon`
+- Register button: `BtnRegister`
+
+## Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `CustomSecuritySample/scripts/Setup-Users.ps1` | Register users in UserAccounts DB (use `-Integrated` flag) |
+| `CustomSecuritySample/Setup/CreateUserStore.sql` | Create UserAccounts DB, tables, stored procs |
+
+**No IIS required**: SSRS 2019 Native Mode self-hosts both endpoints via HTTP.sys (URL reservations managed by Reporting Services Configuration Manager). IIS is only needed if a separate front-end proxy application is added.
 
 ## Hard Rules
 

@@ -4,8 +4,7 @@
 
 param(
     [string]$SSRSPath = 'C:\Program Files\Microsoft SQL Server Reporting Services',
-    [string]$LoginSiteName = 'SSRSLogin',
-    [string]$LoginSitePath = 'C:\inetpub\SSRSLogin',
+    [string]$SqlServer = 'localhost',
     [switch]$Force,
     [switch]$DropDatabase
 )
@@ -44,60 +43,70 @@ if ($service -and $service.Status -eq 'Running') {
 }
 
 # ---------------------------------------------------------------------------
-# Step 2: Restore the definitive clean config files.
-# The '- Copy.config' files were created immediately after the original SSRS
-# install, before any Custom Security changes.  They are the ground truth.
+# Step 2: Restore config files from the most recent backup in .\backups\
 # ---------------------------------------------------------------------------
-Write-Host '[2/8] Restoring configuration files from definitive copies' -ForegroundColor Yellow
-$targetDir = Join-Path $SSRSPath 'SSRS\ReportServer'
+Write-Host '[2/8] Restoring configuration files from backup' -ForegroundColor Yellow
 
-$copyMap = @(
-    @{ Src = 'rsreportserver - Copy.config'; Dst = 'rsreportserver.config' }
-    @{ Src = 'web - Copy.config';            Dst = 'web.config' }
-    @{ Src = 'rssrvpolicy - Copy.config';    Dst = 'rssrvpolicy.config' }
+$repoRoot   = Split-Path -Parent $PSScriptRoot
+$backupsDir = Join-Path $repoRoot 'backups'
+
+if (-not (Test-Path $backupsDir)) {
+    Write-Error "Backups folder not found: $backupsDir — run Backup-Config.ps1 before deploying."
+    exit 1
+}
+
+# Find most recent timestamped backup folder
+$latestBackup = Get-ChildItem $backupsDir -Directory | Sort-Object Name -Descending | Select-Object -First 1
+if ($null -eq $latestBackup) {
+    Write-Error "No backup folders found in $backupsDir"
+    exit 1
+}
+
+Write-Host "  Restoring from: $($latestBackup.FullName)" -ForegroundColor Gray
+
+$restoreMap = @(
+    @{ Src = "ReportServer\rsreportserver.config"; Dst = Join-Path $SSRSPath 'SSRS\ReportServer\rsreportserver.config' }
+    @{ Src = "ReportServer\web.config";            Dst = Join-Path $SSRSPath 'SSRS\ReportServer\web.config' }
+    @{ Src = "ReportServer\rssrvpolicy.config";    Dst = Join-Path $SSRSPath 'SSRS\ReportServer\rssrvpolicy.config' }
+    @{ Src = "Portal\RSPortal.exe.config";         Dst = Join-Path $SSRSPath 'SSRS\Portal\RSPortal.exe.config' }
 )
 
-foreach ($entry in $copyMap) {
-    $src = Join-Path $targetDir $entry.Src
-    $dst = Join-Path $targetDir $entry.Dst
+foreach ($entry in $restoreMap) {
+    $src = Join-Path $latestBackup.FullName $entry.Src
     if (Test-Path $src) {
-        Copy-Item $src -Destination $dst -Force
-        Write-Host "  Restored: $($entry.Dst)" -ForegroundColor Green
+        Copy-Item $src -Destination $entry.Dst -Force
+        Write-Host "  Restored: $($entry.Src)" -ForegroundColor Green
     } else {
-        Write-Error "Definitive copy not found: $src"
-        exit 1
+        Write-Warning "Backup file not found, skipping: $src"
     }
 }
 
 Write-Host '[3/8] Removing CustomSecurity DLLs' -ForegroundColor Yellow
+$dllName = 'Microsoft.Samples.ReportingServices.CustomSecurity.dll'
+$pdbName = 'Microsoft.Samples.ReportingServices.CustomSecurity.pdb'
 $dllsToRemove = @(
-    Join-Path $targetDir 'bin\CustomSecurity.dll'
-    Join-Path $targetDir 'bin\Microsoft.ReportingServices.CustomSecurity.dll'
+    Join-Path $SSRSPath "SSRS\ReportServer\bin\$dllName"
+    Join-Path $SSRSPath "SSRS\ReportServer\bin\$pdbName"
+    Join-Path $SSRSPath "SSRS\Portal\$dllName"
+    Join-Path $SSRSPath "SSRS\Portal\$pdbName"
 )
 foreach ($dllPath in $dllsToRemove) {
     if (Test-Path $dllPath) {
         Remove-Item $dllPath -Force
-        Write-Host "  Removed: $(Split-Path $dllPath -Leaf)" -ForegroundColor Green
+        Write-Host "  Removed: $dllPath" -ForegroundColor Green
     }
 }
 
-Write-Host '[4/8] Removing IIS login site' -ForegroundColor Yellow
-Import-Module WebAdministration -ErrorAction SilentlyContinue
-$loginSite = Get-Website -Name $LoginSiteName -ErrorAction SilentlyContinue
-if ($loginSite) {
-    Remove-Website -Name $LoginSiteName -ErrorAction SilentlyContinue
-    Write-Host "Removed IIS site: $LoginSiteName" -ForegroundColor Green
+Write-Host '[4/8] Removing Logon.aspx from ReportServer' -ForegroundColor Yellow
+$logon = Join-Path $SSRSPath 'SSRS\ReportServer\Logon.aspx'
+if (Test-Path $logon) {
+    Remove-Item $logon -Force
+    Write-Host "  Removed: $logon" -ForegroundColor Green
 } else {
-    Write-Host 'Login site not found' -ForegroundColor Gray
+    Write-Host '  Logon.aspx not found — skipped' -ForegroundColor Gray
 }
 
-Write-Host '[5/8] Removing login site folder' -ForegroundColor Yellow
-if (-not [string]::IsNullOrWhiteSpace($LoginSitePath) -and (Test-Path $LoginSitePath)) {
-    Remove-Item -Path $LoginSitePath -Recurse -Force
-    Write-Host "Removed login site folder: $LoginSitePath" -ForegroundColor Green
-} else {
-    Write-Host "Login site folder not found or not specified: $LoginSitePath" -ForegroundColor Gray
-}
+Write-Host '[5/8] Placeholder (IIS not used in SSRS 2019 Native Mode)' -ForegroundColor Gray
 
 Write-Host '[6/8] Starting SSRS service' -ForegroundColor Yellow
 if ($service) {

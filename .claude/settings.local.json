@@ -34,7 +34,8 @@
       "Bash(/c/temp/check_access.ps1:*)",
       "Bash(/c/temp/check_svcacct.ps1:*)",
       "Bash(/c/temp/check_guest2.ps1:*)",
-      "Bash(/c/temp/fix_perms2.ps1:*)"
+      "Bash(/c/temp/fix_perms2.ps1:*)",
+      "Bash(powershell:*)"
     ]
   }
 }

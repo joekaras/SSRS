@@ -4,7 +4,7 @@
 # Used to validate successful rollback to Windows Authentication or deployment status.
 
 param(
-    [string]$ServerUrl = 'http://vwmazbp360test',
+    [string]$ServerUrl = 'http://vmlenovo',
     [switch]$Verbose
 )
 

@@ -27,7 +27,7 @@ $machineKeyXml = @"
 <machineKey
   validationKey="$validationKey"
   decryptionKey="$decryptionKey"
-  validation="SHA1"
+  validation="HMACSHA256"
   decryption="AES" />
 "@
 

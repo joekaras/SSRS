@@ -6,7 +6,8 @@ param(
     [string]$SSRSPath = 'C:\Program Files\Microsoft SQL Server Reporting Services',
     [string]$LoginSiteName = 'SSRSLogin',
     [string]$LoginSitePath = 'C:\inetpub\SSRSLogin',
-    [switch]$Force
+    [switch]$Force,
+    [switch]$DropDatabase
 )
 
 Set-StrictMode -Version Latest
@@ -34,7 +35,7 @@ if (-not $Force) {
     Write-Host 'Force flag set - skipping confirmation.' -ForegroundColor Yellow
 }
 
-Write-Host '[1/6] Stopping SSRS service' -ForegroundColor Yellow
+Write-Host '[1/8] Stopping SSRS service' -ForegroundColor Yellow
 $serviceName = 'SQLServerReportingServices'
 $service = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
 if ($service -and $service.Status -eq 'Running') {
@@ -47,7 +48,7 @@ if ($service -and $service.Status -eq 'Running') {
 # The '- Copy.config' files were created immediately after the original SSRS
 # install, before any Custom Security changes.  They are the ground truth.
 # ---------------------------------------------------------------------------
-Write-Host '[2/6] Restoring configuration files from definitive copies' -ForegroundColor Yellow
+Write-Host '[2/8] Restoring configuration files from definitive copies' -ForegroundColor Yellow
 $targetDir = Join-Path $SSRSPath 'SSRS\ReportServer'
 
 $copyMap = @(
@@ -68,7 +69,7 @@ foreach ($entry in $copyMap) {
     }
 }
 
-Write-Host '[3/6] Removing CustomSecurity DLLs' -ForegroundColor Yellow
+Write-Host '[3/8] Removing CustomSecurity DLLs' -ForegroundColor Yellow
 $dllsToRemove = @(
     Join-Path $targetDir 'bin\CustomSecurity.dll'
     Join-Path $targetDir 'bin\Microsoft.ReportingServices.CustomSecurity.dll'
@@ -80,7 +81,7 @@ foreach ($dllPath in $dllsToRemove) {
     }
 }
 
-Write-Host '[4/6] Removing IIS login site' -ForegroundColor Yellow
+Write-Host '[4/8] Removing IIS login site' -ForegroundColor Yellow
 Import-Module WebAdministration -ErrorAction SilentlyContinue
 $loginSite = Get-Website -Name $LoginSiteName -ErrorAction SilentlyContinue
 if ($loginSite) {
@@ -90,7 +91,7 @@ if ($loginSite) {
     Write-Host 'Login site not found' -ForegroundColor Gray
 }
 
-Write-Host '[5/6] Removing login site folder' -ForegroundColor Yellow
+Write-Host '[5/8] Removing login site folder' -ForegroundColor Yellow
 if (-not [string]::IsNullOrWhiteSpace($LoginSitePath) -and (Test-Path $LoginSitePath)) {
     Remove-Item -Path $LoginSitePath -Recurse -Force
     Write-Host "Removed login site folder: $LoginSitePath" -ForegroundColor Green
@@ -98,10 +99,64 @@ if (-not [string]::IsNullOrWhiteSpace($LoginSitePath) -and (Test-Path $LoginSite
     Write-Host "Login site folder not found or not specified: $LoginSitePath" -ForegroundColor Gray
 }
 
-Write-Host '[6/6] Starting SSRS service' -ForegroundColor Yellow
+Write-Host '[6/8] Starting SSRS service' -ForegroundColor Yellow
 if ($service) {
     Start-Service -Name $serviceName
     Write-Host 'SSRS service started' -ForegroundColor Green
+}
+
+Write-Host '[7/8] Validating SSRS endpoints' -ForegroundColor Yellow
+Write-Host 'Waiting for SSRS to fully start...' -ForegroundColor Gray
+Start-Sleep -Seconds 15
+
+$testScript = Join-Path $PSScriptRoot 'Test-SSRSEndpoints.ps1'
+if (Test-Path $testScript) {
+    $testResult = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $testScript
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host 'Endpoint validation: PASS' -ForegroundColor Green
+    } else {
+        Write-Warning 'Endpoint validation failed. Check output above for details.'
+    }
+} else {
+    Write-Warning "Test script not found: $testScript - skipping validation"
+}
+
+# Step 8: Optional database cleanup
+Write-Host '[8/8] UserAccounts database cleanup' -ForegroundColor Yellow
+
+$shouldDropDatabase = $false
+
+if ($DropDatabase) {
+    $shouldDropDatabase = $true
+    Write-Host 'DropDatabase flag set - will remove UserAccounts database' -ForegroundColor Yellow
+} else {
+    Write-Host 'The UserAccounts database contains custom security user accounts.' -ForegroundColor Gray
+    Write-Host 'Keeping it allows faster re-deployment. Dropping it provides complete cleanup.' -ForegroundColor Gray
+    $dropConfirm = Read-Host 'Drop UserAccounts database? (yes/no) [default: no]'
+    if ($dropConfirm -eq 'yes') {
+        $shouldDropDatabase = $true
+    }
+}
+
+if ($shouldDropDatabase) {
+    $restoreSqlPath = Join-Path (Split-Path -Parent $PSScriptRoot) 'Setup\RestoreDatabase.sql'
+    if (Test-Path $restoreSqlPath) {
+        try {
+            Write-Host '  Dropping UserAccounts database...' -ForegroundColor Gray
+            sqlcmd -S localhost -E -i "$restoreSqlPath" -b
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host '  UserAccounts database dropped' -ForegroundColor Green
+            } else {
+                Write-Warning "sqlcmd returned exit code $LASTEXITCODE - database may not have been dropped"
+            }
+        } catch {
+            Write-Warning "Failed to execute RestoreDatabase.sql: $_"
+        }
+    } else {
+        Write-Warning "RestoreDatabase.sql not found at: $restoreSqlPath"
+    }
+} else {
+    Write-Host '  UserAccounts database preserved (use -DropDatabase to remove)' -ForegroundColor Gray
 }
 
 Write-Host ''

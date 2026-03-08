@@ -36,7 +36,7 @@ Write-Host 'SSRS Custom Security Deployment' -ForegroundColor Cyan
 Write-Host '================================================' -ForegroundColor Cyan
 
 # Step 1: Build
-Write-Host '[1/7] Building CustomSecurity.dll' -ForegroundColor Yellow
+Write-Host '[1/9] Building CustomSecurity.dll' -ForegroundColor Yellow
 if (-not (Test-Path $projectPath)) {
     Write-Error "Project file not found: $projectPath"
     exit 1
@@ -49,8 +49,39 @@ if (Test-Path $buildScript) {
     dotnet build $projectPath --configuration Release
 }
 
-# Step 2: Stop SSRS (must happen before copying DLL to avoid 'file in use' error)
-Write-Host '[2/8] Stopping SSRS service' -ForegroundColor Yellow
+# Step 2: Create/verify UserAccounts database
+Write-Host '[2/9] Creating UserAccounts database' -ForegroundColor Yellow
+$createDbScript = Join-Path (Split-Path -Parent $PSScriptRoot) 'Setup\CreateUserStore.sql'
+
+if (-not (Test-Path $createDbScript)) {
+    Write-Warning "CreateUserStore.sql not found at: $createDbScript - skipping database creation"
+} else {
+    # Check if database already exists
+    $dbCheckQuery = "SELECT 1 FROM sys.databases WHERE name = 'UserAccounts'"
+    $dbExists = $null
+    try {
+        $dbExists = sqlcmd -S localhost -E -Q $dbCheckQuery -h -1 -W 2>$null
+    } catch {
+        Write-Warning "Could not check for UserAccounts database: $_"
+    }
+    
+    if ($dbExists -and $dbExists.Trim() -eq '1') {
+        Write-Host '  UserAccounts database already exists' -ForegroundColor Green
+    } else {
+        Write-Host '  Creating UserAccounts database...' -ForegroundColor Gray
+        sqlcmd -S localhost -E -i "$createDbScript" -b
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host '  UserAccounts database created' -ForegroundColor Green
+            Write-Host '  NOTE: Register users with .\Scripts\Setup-Users.ps1' -ForegroundColor Cyan
+        } else {
+            Write-Error "Failed to create UserAccounts database (sqlcmd exit code: $LASTEXITCODE)"
+            exit 1
+        }
+    }
+}
+
+# Step 3: Stop SSRS (must happen before copying DLL to avoid 'file in use' error)
+Write-Host '[3/9] Stopping SSRS service' -ForegroundColor Yellow
 $serviceName = 'SQLServerReportingServices'
 $service = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
 if ($service -and $service.Status -eq 'Running') {
@@ -60,8 +91,8 @@ if ($service -and $service.Status -eq 'Running') {
     Write-Warning 'SSRS service not found. You may need to stop it manually.'
 }
 
-# Step 3: Restore Windows auth baseline so the backup captured in step 5 is always clean
-Write-Host '[3/8] Restoring Windows auth baseline before backup' -ForegroundColor Yellow
+# Step 4: Restore Windows auth baseline so the backup captured in step 6 is always clean
+Write-Host '[4/9] Restoring Windows auth baseline before backup' -ForegroundColor Yellow
 $restoreScript = Join-Path $PSScriptRoot 'Restore-SSRSWindowsAuth.ps1'
 if (Test-Path $restoreScript) {
     powershell.exe -NoProfile -ExecutionPolicy Bypass -File $restoreScript `
@@ -75,8 +106,8 @@ if (Test-Path $restoreScript) {
     Write-Warning "Restore-SSRSWindowsAuth.ps1 not found at $restoreScript - backup may not be clean"
 }
 
-# Step 4: Copy DLL
-Write-Host '[4/8] Copying DLL to ReportServer bin' -ForegroundColor Yellow
+# Step 5: Copy DLL
+Write-Host '[5/9] Copying DLL to ReportServer bin' -ForegroundColor Yellow
 $sourceDll = $sourceDllCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
 
 if (-not $sourceDll) {
@@ -107,8 +138,8 @@ foreach ($dll in $siteDlls) {
 }
 Write-Host "Login site assemblies copied: $($siteDlls.Count) file(s) -> $loginBinDir" -ForegroundColor Green
 
-# Step 5: Backup configuration
-Write-Host '[5/8] Backing up configuration files' -ForegroundColor Yellow
+# Step 6: Backup configuration
+Write-Host '[6/9] Backing up configuration files' -ForegroundColor Yellow
 $timestamp = Get-Date -Format 'yyyyMMdd_HHmmss'
 $backupDir = Join-Path $SSRSPath "SSRS\ReportServer\ConfigBackup_$timestamp"
 New-Item -ItemType Directory -Path $backupDir -Force | Out-Null
@@ -127,8 +158,8 @@ foreach ($configFile in $configFiles) {
 }
 Write-Host "Backup location: $backupDir" -ForegroundColor Green
 
-# Step 6: Create IIS site
-Write-Host '[6/8] Creating IIS site for Logon.aspx' -ForegroundColor Yellow
+# Step 7: Create IIS site
+Write-Host '[7/9] Creating IIS site for Logon.aspx' -ForegroundColor Yellow
 
 #Change by tanuj on 02 March 2016
 # --- Copy login site files to $loginRoot ---
@@ -211,8 +242,8 @@ New-Website -Name $LoginSiteName `
 
 Write-Host "Login URL: http://localhost:$LoginPort/Logon.aspx" -ForegroundColor Cyan
 
-# Step 7: Apply configuration (machine keys + config file edits) and start SSRS
-Write-Host '[7/8] Applying SSRS configuration' -ForegroundColor Yellow
+# Step 8: Apply configuration (machine keys + config file edits) and start SSRS
+Write-Host '[8/9] Applying SSRS configuration' -ForegroundColor Yellow
 $configureScript = Join-Path $PSScriptRoot 'Configure-CustomSecurity.ps1'
 if (Test-Path $configureScript) {
     powershell.exe -NoProfile -ExecutionPolicy Bypass -File $configureScript `
@@ -229,12 +260,126 @@ if (Test-Path $configureScript) {
     Write-Host 'Run it manually: .\Scripts\Configure-CustomSecurity.ps1 -StartService' -ForegroundColor Yellow
 }
 
-# Step 8: Finish
-Write-Host '[8/8] Deployment complete' -ForegroundColor Green
+# Step 9: Finish
+Write-Host '[9/9] Deployment complete' -ForegroundColor Green
 Write-Host ''
+
+# Prompt for verbose logging
+Write-Host 'Enable verbose logging for troubleshooting? (Y/N)' -ForegroundColor Yellow -NoNewline
+Write-Host ' [Default: Y]: ' -NoNewline -ForegroundColor Gray
+$response = Read-Host
+
+if ($response -notmatch '^[Nn]') {
+    Write-Host ''
+    Write-Host 'Enabling verbose logging...' -ForegroundColor Yellow
+    $loggingScript = Join-Path $PSScriptRoot 'Set-Logging.ps1'
+    if (Test-Path $loggingScript) {
+        powershell.exe -NoProfile -ExecutionPolicy Bypass -File $loggingScript -Level Verbose
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host 'Verbose logging enabled.' -ForegroundColor Green
+        } else {
+            Write-Warning 'Failed to enable verbose logging. Run manually: .\Scripts\Set-Logging.ps1 -Level Verbose'
+        }
+    } else {
+        Write-Warning "Set-Logging.ps1 not found at $loggingScript"
+    }
+    Write-Host ''
+} else {
+    Write-Host 'Verbose logging not enabled (production mode).' -ForegroundColor Gray
+    Write-Host 'To enable later: .\Scripts\Set-Logging.ps1 -Level Verbose' -ForegroundColor Gray
+    Write-Host ''
+}
+
+# Prompt for creating test users
+Write-Host 'Create test users (testuser, admin, report_viewer)? (Y/N)' -ForegroundColor Yellow -NoNewline
+Write-Host ' [Default: Y]: ' -NoNewline -ForegroundColor Gray
+$userResponse = Read-Host
+
+if ($userResponse -notmatch '^[Nn]') {
+    Write-Host ''
+    Write-Host 'Creating test users...' -ForegroundColor Yellow
+    $setupUsersScript = Join-Path $PSScriptRoot 'Setup-Users.ps1'
+    if (Test-Path $setupUsersScript) {
+        powershell.exe -NoProfile -ExecutionPolicy Bypass -File $setupUsersScript -CreateTestUsers -Integrated
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host 'Test users created successfully.' -ForegroundColor Green
+            Write-Host 'Credentials: testuser/Test@123, admin/Admin@123, report_viewer/Viewer@123' -ForegroundColor Cyan
+            $usersCreated = $true
+        } else {
+            Write-Warning 'Failed to create test users. Run manually: .\Scripts\Setup-Users.ps1 -CreateTestUsers -Integrated'
+            $usersCreated = $false
+        }
+    } else {
+        Write-Warning "Setup-Users.ps1 not found at $setupUsersScript"
+        $usersCreated = $false
+    }
+    Write-Host ''
+} else {
+    Write-Host 'Test users not created.' -ForegroundColor Gray
+    Write-Host 'To create later: .\Scripts\Setup-Users.ps1 -CreateTestUsers -Integrated' -ForegroundColor Gray
+    Write-Host ''
+    $usersCreated = $false
+}
+
+# Prompt for running tests
+if ($usersCreated) {
+    Write-Host 'Run deployment tests? (Y/N)' -ForegroundColor Yellow -NoNewline
+    Write-Host ' [Default: Y]: ' -NoNewline -ForegroundColor Gray
+    $testResponse = Read-Host
+    
+    if ($testResponse -notmatch '^[Nn]') {
+        Write-Host ''
+        
+        # Test 1: Forms Auth Infrastructure
+        Write-Host 'Running Forms Auth infrastructure test...' -ForegroundColor Yellow
+        $testFormsAuthScript = Join-Path $PSScriptRoot 'Test-FormsAuth.ps1'
+        if (Test-Path $testFormsAuthScript) {
+            powershell.exe -NoProfile -ExecutionPolicy Bypass -File $testFormsAuthScript
+            if ($LASTEXITCODE -ne 0) {
+                Write-Warning 'Test-FormsAuth.ps1 reported issues. Check output above.'
+            }
+        } else {
+            Write-Warning "Test-FormsAuth.ps1 not found at $testFormsAuthScript"
+        }
+        Write-Host ''
+        
+        # Test 2: Login Functionality
+        Write-Host 'Running login functionality test...' -ForegroundColor Yellow
+        $testLoginScript = Join-Path $PSScriptRoot 'Test-Login.ps1'
+        if (Test-Path $testLoginScript) {
+            powershell.exe -NoProfile -ExecutionPolicy Bypass -File $testLoginScript
+            if ($LASTEXITCODE -ne 0) {
+                Write-Warning 'Test-Login.ps1 reported issues. Check output above.'
+            }
+        } else {
+            Write-Warning "Test-Login.ps1 not found at $testLoginScript"
+        }
+        Write-Host ''
+        $testsRun = $true
+    } else {
+        Write-Host 'Tests skipped.' -ForegroundColor Gray
+        Write-Host 'To test later: .\Scripts\Test-FormsAuth.ps1 and .\Scripts\Test-Login.ps1' -ForegroundColor Gray
+        Write-Host ''
+        $testsRun = $false
+    }
+} else {
+    $testsRun = $false
+}
+
 Write-Host 'NEXT:' -ForegroundColor Cyan
-Write-Host "1. Test login: http://localhost:$LoginPort/Logon.aspx" -ForegroundColor White
-Write-Host '2. Open reports: http://localhost/Reports' -ForegroundColor White
+if ($testsRun) {
+    Write-Host "  • Manual browser test: http://localhost:$LoginPort/Logon.aspx" -ForegroundColor White
+    Write-Host '  • Open reports portal: http://localhost/Reports' -ForegroundColor White
+} elseif ($usersCreated) {
+    Write-Host "  • Run tests: .\Scripts\Test-FormsAuth.ps1 and .\Scripts\Test-Login.ps1" -ForegroundColor White
+    Write-Host "  • Test login: http://localhost:$LoginPort/Logon.aspx" -ForegroundColor White
+    Write-Host '  • Open reports: http://localhost/Reports' -ForegroundColor White
+} else {
+    Write-Host '  • Register users: .\Scripts\Setup-Users.ps1 -CreateTestUsers -Integrated' -ForegroundColor White
+    Write-Host '  • Run tests: .\Scripts\Test-FormsAuth.ps1 and .\Scripts\Test-Login.ps1' -ForegroundColor White
+    Write-Host "  • Test login: http://localhost:$LoginPort/Logon.aspx" -ForegroundColor White
+    Write-Host '  • Open reports: http://localhost/Reports' -ForegroundColor White
+}
 Write-Host ''
 Write-Host "Backup location: $backupDir" -ForegroundColor Gray
 Write-Host '================================================' -ForegroundColor Cyan

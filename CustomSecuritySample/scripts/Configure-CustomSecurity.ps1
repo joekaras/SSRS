@@ -8,6 +8,7 @@ param(
     [string]$SSRSPath      = 'C:\Program Files\Microsoft SQL Server Reporting Services',
     [string]$LoginSitePath = 'C:\inetpub\SSRSLogin',
     [string]$LoginPort     = '8080',
+    [string]$LoginHost     = 'localhost',
     [string]$ValidationKey = '',   # leave blank to auto-generate
     [string]$DecryptionKey = '',   # leave blank to auto-generate
     [switch]$StartService
@@ -59,6 +60,7 @@ function New-HexString {
 $rsConfig        = Join-Path $SSRSPath 'SSRS\ReportServer\rsreportserver.config'
 $rsWebConfig     = Join-Path $SSRSPath 'SSRS\ReportServer\web.config'
 $rsPolicyConfig  = Join-Path $SSRSPath 'SSRS\ReportServer\rssrvpolicy.config'
+$portalConfig    = Join-Path $SSRSPath 'SSRS\Portal\RSPortal.exe.config'
 $loginWebConfig  = Join-Path $LoginSitePath 'web.config'
 $customDllPath   = Join-Path $SSRSPath 'SSRS\ReportServer\bin\Microsoft.ReportingServices.CustomSecurity.dll'
 
@@ -95,7 +97,7 @@ $keyFile   = Join-Path $repoRoot 'MachineKey.txt'
 <machineKey
   validationKey="$ValidationKey"
   decryptionKey="$DecryptionKey"
-  validation="SHA1"
+  validation="HMACSHA256"
   decryption="AES" />
 "@ | Out-File -FilePath $keyFile -Encoding UTF8
 Write-Host "  Keys saved to : $keyFile" -ForegroundColor Green
@@ -173,7 +175,7 @@ if ($existingCaui) { $uiNode.RemoveChild($existingCaui) | Out-Null }
 
 $cauiEl      = $rsCfg.CreateElement('CustomAuthenticationUI')
 $loginUrlEl  = $rsCfg.CreateElement('loginUrl')
-$loginUrlEl.InnerText = "http://localhost:$LoginPort/Logon.aspx"
+$loginUrlEl.InnerText = "http://$LoginHost:$LoginPort/Logon.aspx"
 $useSslEl    = $rsCfg.CreateElement('UseSSL')
 $useSslEl.InnerText   = 'false'
 $cauiEl.AppendChild($loginUrlEl) | Out-Null
@@ -200,7 +202,7 @@ if ($authEl) {
     $existingForms = $authEl.SelectSingleNode('forms')
     if ($existingForms) { $authEl.RemoveChild($existingForms) | Out-Null }
     $formsEl = $rwc.CreateElement('forms')
-    $formsEl.SetAttribute('loginUrl', "http://localhost:$LoginPort/Logon.aspx")
+    $formsEl.SetAttribute('loginUrl', "http://$LoginHost:$LoginPort/Logon.aspx")
     $formsEl.SetAttribute('name',     '.ASPXFORMSAUTH')
     $formsEl.SetAttribute('timeout',  '60')
     $formsEl.SetAttribute('path',     '/')
@@ -238,7 +240,7 @@ if ($existingMk) { $sw.RemoveChild($existingMk) | Out-Null }
 $mkEl = $rwc.CreateElement('machineKey')
 $mkEl.SetAttribute('validationKey', $ValidationKey)
 $mkEl.SetAttribute('decryptionKey', $DecryptionKey)
-$mkEl.SetAttribute('validation',    'SHA1')
+$mkEl.SetAttribute('validation',    'HMACSHA256')
 $mkEl.SetAttribute('decryption',    'AES')
 $sw.AppendChild($mkEl) | Out-Null
 Write-Host '  machineKey added to ReportServer web.config' -ForegroundColor Green
@@ -287,7 +289,7 @@ if ($null -eq $targetGroup) {
 # ---------------------------------------------------------------------------
 # Step 5: Login site web.config - add matching machineKey
 # ---------------------------------------------------------------------------
-Write-Host '[5/5] Patching login site web.config' -ForegroundColor Yellow
+Write-Host '[5/6] Patching login site web.config' -ForegroundColor Yellow
 
 [xml]$lwc  = Get-Content $loginWebConfig -Raw
 $lsw       = $lwc.SelectSingleNode('//configuration/system.web')
@@ -300,13 +302,43 @@ if ($null -eq $lsw) {
     $lmkEl = $lwc.CreateElement('machineKey')
     $lmkEl.SetAttribute('validationKey', $ValidationKey)
     $lmkEl.SetAttribute('decryptionKey', $DecryptionKey)
-    $lmkEl.SetAttribute('validation',    'SHA1')
+    $lmkEl.SetAttribute('validation',    'HMACSHA256')
     $lmkEl.SetAttribute('decryption',    'AES')
     $lsw.AppendChild($lmkEl) | Out-Null
     Write-Host '  machineKey added to login site web.config' -ForegroundColor Green
 
     Save-Xml -Doc $lwc -Path $loginWebConfig
     Write-Host "  Saved: $loginWebConfig" -ForegroundColor Green
+}
+
+# ---------------------------------------------------------------------------
+# Step 6: Portal web.config (SSRS 2016+)
+# ---------------------------------------------------------------------------
+Write-Host '[6/6] Patching portal config (RSPortal.exe.config)' -ForegroundColor Yellow
+
+if (Test-Path $portalConfig) {
+    [xml]$pcfg = Get-Content $portalConfig -Raw
+    $pcRoot = $pcfg.SelectSingleNode('//configuration')
+    $psw = $pcfg.SelectSingleNode('//configuration/system.web')
+    if ($null -eq $psw) {
+        $psw = $pcfg.CreateElement('system.web')
+        $pcRoot.AppendChild($psw) | Out-Null
+    }
+
+    $existingPmk = $psw.SelectSingleNode('machineKey')
+    if ($existingPmk) { $psw.RemoveChild($existingPmk) | Out-Null }
+    $pmkEl = $pcfg.CreateElement('machineKey')
+    $pmkEl.SetAttribute('validationKey', $ValidationKey)
+    $pmkEl.SetAttribute('decryptionKey', $DecryptionKey)
+    $pmkEl.SetAttribute('validation',    'HMACSHA256')
+    $pmkEl.SetAttribute('decryption',    'AES')
+    $psw.AppendChild($pmkEl) | Out-Null
+    Write-Host '  machineKey added to portal config' -ForegroundColor Green
+
+    Save-Xml -Doc $pcfg -Path $portalConfig
+    Write-Host "  Saved: $portalConfig" -ForegroundColor Green
+} else {
+    Write-Warning "Portal config not found at: $portalConfig"
 }
 
 # ---------------------------------------------------------------------------
@@ -327,16 +359,16 @@ Write-Host ''
 Write-Host '================================================' -ForegroundColor Cyan
 Write-Host 'Configuration complete.' -ForegroundColor Cyan
 Write-Host "Machine keys saved to : $keyFile" -ForegroundColor White
-Write-Host "Login URL             : http://localhost:$LoginPort/Logon.aspx" -ForegroundColor White
-Write-Host "Reports URL           : http://localhost/Reports" -ForegroundColor White
+Write-Host "Login URL             : http://$LoginHost:$LoginPort/Logon.aspx" -ForegroundColor White
+Write-Host "Reports URL           : http://$LoginHost/Reports" -ForegroundColor White
 Write-Host ''
 Write-Host 'Next steps:' -ForegroundColor Yellow
 if (-not $StartService) {
     Write-Host '  1. Start SSRS: Start-Service SQLServerReportingServices' -ForegroundColor White
-    Write-Host "  2. Test login : http://localhost:$LoginPort/Logon.aspx" -ForegroundColor White
-    Write-Host '  3. Open reports: http://localhost/Reports' -ForegroundColor White
+    Write-Host "  2. Test login : http://$LoginHost:$LoginPort/Logon.aspx" -ForegroundColor White
+    Write-Host "  3. Open reports: http://$LoginHost/Reports" -ForegroundColor White
 } else {
-    Write-Host "  1. Test login : http://localhost:$LoginPort/Logon.aspx" -ForegroundColor White
-    Write-Host '  2. Open reports: http://localhost/Reports' -ForegroundColor White
+    Write-Host "  1. Test login : http://$LoginHost:$LoginPort/Logon.aspx" -ForegroundColor White
+    Write-Host "  2. Open reports: http://$LoginHost/Reports" -ForegroundColor White
 }
 Write-Host '================================================' -ForegroundColor Cyan

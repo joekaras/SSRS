@@ -1,0 +1,40 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(where msbuild)",
+      "Read(//c/Program Files/Microsoft Visual Studio/**)",
+      "Read(//c/Program Files \\(x86\\)/Microsoft Visual Studio/**)",
+      "Read(//c/Program Files/Microsoft SQL Server Reporting Services/SSRS/ReportServer/**)",
+      "Read(//c/Program Files/Microsoft SQL Server Reporting Services/**)",
+      "Bash(\"/c/Program Files/Microsoft Visual Studio/18/Community/MSBuild/Current/Bin/MSBuild.exe\":*)",
+      "Bash(cmd.exe /c '\"\"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\18\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\"\" \"\"C:\\\\Users\\\\joeka\\\\OneDrive\\\\Documents\\\\GitHub\\\\SSRS\\\\CustomSecuritySample\\\\CustomSecurity.csproj\"\" /p:Configuration=Release /v:minimal > C:\\\\Users\\\\joeka\\\\AppData\\\\Local\\\\Temp\\\\msbuild_out.txt 2>&1')",
+      "Read(//c/Users/joeka/AppData/Local/Temp/**)",
+      "Bash(powershell.exe:*)",
+      "Bash(where sqlcmd:*)",
+      "Bash(sqlcmd:*)",
+      "Bash(\"C:/Users/joeka/AppData/Local/Temp/test-reports.ps1\":*)",
+      "Bash(\"C:/Users/joeka/AppData/Local/Temp/check-events.ps1\":*)",
+      "Bash(\"C:/Users/joeka/AppData/Local/Temp/test-rs.ps1\":*)",
+      "Bash(curl.exe:*)",
+      "Bash(\"C:/Users/joeka/AppData/Local/Temp/test-login.ps1\":*)",
+      "Bash(\"C:/Users/joeka/AppData/Local/Temp/test-login2.ps1\":*)",
+      "Bash(\"C:/Users/joeka/AppData/Local/Temp/test-login3.ps1\":*)",
+      "Bash(\"C:/Users/joeka/AppData/Local/Temp/check-enums.ps1\":*)",
+      "Bash(\"C:/Users/joeka/AppData/Local/Temp/check-enums2.ps1\":*)",
+      "Bash(\"C:/Users/joeka/AppData/Local/Temp/test-api.ps1\":*)",
+      "Bash(\"C:/Users/joeka/AppData/Local/Temp/check-mgmt.ps1\":*)",
+      "Bash(\"C:/Users/joeka/AppData/Local/Temp/read-log.ps1\":*)",
+      "Bash(\"C:/Users/joeka/AppData/Local/Temp/read-log2.ps1\":*)",
+      "Bash(\"C:/Users/joeka/AppData/Local/Temp/test-rs-cookie.ps1\":*)",
+      "Bash(/c/temp/procinfo.ps1:*)",
+      "Bash(/c/temp/check_perms.ps1:*)",
+      "Bash(/c/temp/fix_perms.ps1:*)",
+      "Bash(/c/temp/check_db.ps1:*)",
+      "Bash(/c/temp/check_perms2.ps1:*)",
+      "Bash(/c/temp/check_access.ps1:*)",
+      "Bash(/c/temp/check_svcacct.ps1:*)",
+      "Bash(/c/temp/check_guest2.ps1:*)",
+      "Bash(/c/temp/fix_perms2.ps1:*)"
+    ]
+  }
+}

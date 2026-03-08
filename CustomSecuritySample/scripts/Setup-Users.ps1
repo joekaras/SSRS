@@ -22,22 +22,24 @@ function New-PasswordHash {
         [string]$Password,
         [ref]$Salt
     )
-    
-    # Generate random salt (10 characters alphanumeric)
-    $saltChars = -join ((65..90) + (97..122) + (48..57) | Get-Random -Count 10 | ForEach-Object { [char]$_ })
-    $Salt.Value = $saltChars
-    
-    # Combine password + salt and hash with SHA-256 (matches C# FormsAuthentication.HashPasswordForStoringInConfigFile)
-    $combined = $Password + $saltChars
-    
-    # Use SHA-256 to match C# implementation
-    $sha256 = [System.Security.Cryptography.SHA256]::Create()
-    $hashBytes = $sha256.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($combined))
-    $sha256.Dispose()
-    
-    # Convert to uppercase hex string (FormsAuthentication uses uppercase)
+
+    # Generate salt using RNGCryptoServiceProvider + Base64 (matches AuthenticationUtilities.CreateSalt)
+    $rng = New-Object System.Security.Cryptography.RNGCryptoServiceProvider
+    $saltBytes = New-Object byte[] 6   # 6 bytes = 8 Base64 chars, trimmed to 10 chars max
+    $rng.GetBytes($saltBytes)
+    $rng.Dispose()
+    $saltString = [Convert]::ToBase64String($saltBytes)  # e.g. "abc+de=="
+    $Salt.Value = $saltString
+
+    # Combine password + salt and hash with SHA1 (matches AuthenticationUtilities.CreatePasswordHash)
+    $combined = $Password + $saltString
+    $sha1 = [System.Security.Cryptography.SHA1]::Create()
+    $hashBytes = $sha1.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($combined))
+    $sha1.Dispose()
+
+    # Convert to uppercase hex string (matches FormsAuthentication.HashPasswordForStoringInConfigFile output)
     $hashString = ($hashBytes | ForEach-Object { $_.ToString('X2') }) -join ''
-    
+
     return $hashString
 }
 
@@ -77,7 +79,7 @@ EXEC RegisterUser @userName = N'$UserName', @passwordHash = N'$passwordHash', @s
         }
         
         if ($LASTEXITCODE -eq 0) {
-            Write-Host "  ✓ User registered: $UserName" -ForegroundColor Green
+            Write-Host "  OK User registered: $UserName" -ForegroundColor Green
             return $true
         } else {
             Write-Warning "Failed to register user: $UserName (sqlcmd exit code: $LASTEXITCODE)"
@@ -171,7 +173,9 @@ else {
 
 Write-Host ''
 Write-Host '================================================' -ForegroundColor Cyan
-Write-Host "Registration complete: $successCount succeeded, $failCount failed" -ForegroundColor $(if ($failCount -eq 0) { 'Green' } else { 'Yellow' })
+$resultColor = if ($failCount -eq 0) { 'Green' } else { 'Yellow' }
+$exitCode = if ($failCount -eq 0) { 0 } else { 1 }
+Write-Host "Registration complete: $successCount succeeded, $failCount failed" -ForegroundColor $resultColor
 Write-Host '================================================' -ForegroundColor Cyan
 
-exit $(if ($failCount -eq 0) { 0 } else { 1 })
+exit $exitCode

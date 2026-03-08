@@ -1,0 +1,14 @@
+C:\Users\joeka\OneDrive\Documents\GitHub\SSRS\CustomSecuritySample\obj\Release\CustomSecurity.csproj.AssemblyReference.cache
+C:\Users\joeka\OneDrive\Documents\GitHub\SSRS\CustomSecuritySample\obj\Release\Microsoft.Samples.ReportingServices.CustomSecurity.App_LocalResources.Logon.aspx.resources
+C:\Users\joeka\OneDrive\Documents\GitHub\SSRS\CustomSecuritySample\obj\Release\Microsoft.Samples.ReportingServices.CustomSecurity.CustomSecurity.resources
+C:\Users\joeka\OneDrive\Documents\GitHub\SSRS\CustomSecuritySample\obj\Release\CustomSecurity.csproj.GenerateResource.cache
+C:\Users\joeka\OneDrive\Documents\GitHub\SSRS\CustomSecuritySample\obj\Release\CustomSecurity.csproj.CoreCompileInputs.cache
+C:\Users\joeka\OneDrive\Documents\GitHub\SSRS\CustomSecuritySample\obj\Release\Microsoft.Samples.ReportingServices.CustomSecurity.dll
+C:\Users\joeka\OneDrive\Documents\GitHub\SSRS\CustomSecuritySample\bin\Release\Setup\CreateUserStore.sql
+C:\Users\joeka\OneDrive\Documents\GitHub\SSRS\CustomSecuritySample\bin\Release\Logon.aspx
+C:\Users\joeka\OneDrive\Documents\GitHub\SSRS\CustomSecuritySample\bin\Release\Logon.aspx.cs
+C:\Users\joeka\OneDrive\Documents\GitHub\SSRS\CustomSecuritySample\bin\Release\Configure.ps1
+C:\Users\joeka\OneDrive\Documents\GitHub\SSRS\CustomSecuritySample\bin\Release\Microsoft.Samples.ReportingServices.CustomSecurity.dll.config
+C:\Users\joeka\OneDrive\Documents\GitHub\SSRS\CustomSecuritySample\bin\Release\Microsoft.Samples.ReportingServices.CustomSecurity.dll
+C:\Users\joeka\OneDrive\Documents\GitHub\SSRS\CustomSecuritySample\bin\Release\Microsoft.ReportingServices.Interfaces.dll
+C:\Users\joeka\OneDrive\Documents\GitHub\SSRS\CustomSecuritySample\obj\Release\CustomSe.96EC3F05.Up2Date

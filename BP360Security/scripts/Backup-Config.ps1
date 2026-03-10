@@ -1,4 +1,4 @@
-# Backup-Config.ps1
+﻿# Backup-Config.ps1
 # Backs up all SSRS configuration files modified by the Custom Security Extension deployment.
 # Creates a timestamped subfolder under .\backups\ with subfolders mirroring source locations.
 

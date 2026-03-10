@@ -1,4 +1,4 @@
-# Set-Logging.ps1
+﻿# Set-Logging.ps1
 # Controls SSRS trace logging level via rsreportserver.config.
 # SSRS 2019 Native Mode — no IIS required.
 #

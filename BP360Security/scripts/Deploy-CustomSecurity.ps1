@@ -1,4 +1,4 @@
-# Deploy-CustomSecurity.ps1
+﻿# Deploy-CustomSecurity.ps1
 # Deploys the SSRS Custom Security Extension for SSRS 2019 Native Mode.
 # No IIS required — SSRS self-hosts the portal and ReportServer via HTTP.sys.
 #

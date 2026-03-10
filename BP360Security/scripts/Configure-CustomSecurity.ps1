@@ -1,4 +1,4 @@
-# Configure-CustomSecurity.ps1
+﻿# Configure-CustomSecurity.ps1
 # Applies all SSRS configuration changes required for Forms Authentication
 # on SSRS 2019 Native Mode (no IIS required).
 #

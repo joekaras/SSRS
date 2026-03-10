@@ -1,4 +1,4 @@
-# Environment.ps1
+﻿# Environment.ps1
 # Central server profile configuration for BP360Security deployment.
 #
 # USAGE — dot-source this file AFTER the param block in any script:

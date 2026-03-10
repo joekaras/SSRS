@@ -166,10 +166,7 @@ namespace BancPac.WpfClient.Auth
                 "sqlAuthCookie", _ssrsBaseUri.Host, "/");
 
             var cookie = manager.CreateCookie(
-                name   : "sqlAuthCookie",
-                value  : cookieValue,
-                domain : _ssrsBaseUri.Host,
-                path   : "/");
+                "sqlAuthCookie", cookieValue, _ssrsBaseUri.Host, "/");
 
             cookie.IsHttpOnly = true;
             // Set Secure = true when the server uses HTTPS.

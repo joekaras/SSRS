@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 .NET Framework 4.8 · SSRS 2019 Native Mode · Custom Security Extension · Forms Authentication
 
-This repository contains a **deployed SSRS 2019 Custom Security Extension** (Forms Authentication) based on the Microsoft sample, customized for production use on `VMLENOVO`. The `CustomSecuritySample/` folder is the active codebase. The `prompts/` folder contains design prompts for future portal work.
+This repository contains a **deployed SSRS 2019 Custom Security Extension** (Forms Authentication) based on the Microsoft sample, customized for production use on `VMLENOVO`. The `BP360Security/` folder is the active codebase. The `prompts/` folder contains design prompts for future portal work.
 
 ### Deployed Environment
 
@@ -70,8 +70,8 @@ The correct ASP.NET control IDs (required for any test scripts or automation):
 
 | Script | Purpose |
 |--------|---------|
-| `CustomSecuritySample/scripts/Setup-Users.ps1` | Register users in UserAccounts DB (use `-Integrated` flag) |
-| `CustomSecuritySample/Setup/CreateUserStore.sql` | Create UserAccounts DB, tables, stored procs |
+| `BP360Security/scripts/Setup-Users.ps1` | Register users in UserAccounts DB (use `-Integrated` flag) |
+| `BP360Security/Setup/CreateUserStore.sql` | Create UserAccounts DB, tables, stored procs |
 
 **No IIS required**: SSRS 2019 Native Mode self-hosts both endpoints via HTTP.sys (URL reservations managed by Reporting Services Configuration Manager). IIS is only needed if a separate front-end proxy application is added.
 

@@ -3,8 +3,8 @@
 # Restores SSRS configuration to Windows Authentication.
 
 param(
-    [string]$SSRSPath = 'C:\Program Files\Microsoft SQL Server Reporting Services',
-    [string]$SqlServer = 'localhost',
+    [string]$SSRSPath  = '',   # auto-detected from Environment.ps1
+    [string]$SqlServer = '',   # auto-detected from Environment.ps1
     [switch]$Force,
     [switch]$DropDatabase
 )
@@ -17,6 +17,12 @@ if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administra
     Write-Error 'This script must be run as Administrator.'
     exit 1
 }
+
+# ── Auto-detect server environment ────────────────────────────────────────
+. (Join-Path $PSScriptRoot 'Environment.ps1')
+$_prof = Get-ServerProfile
+if (-not $SSRSPath)  { $SSRSPath  = $_prof.SsrsInstallRoot }
+if (-not $SqlServer) { $SqlServer = $_prof.SqlServer }
 
 $ErrorActionPreference = 'Stop'
 
@@ -152,7 +158,7 @@ if ($shouldDropDatabase) {
     if (Test-Path $restoreSqlPath) {
         try {
             Write-Host '  Dropping UserAccounts database...' -ForegroundColor Gray
-            sqlcmd -S localhost -E -i "$restoreSqlPath" -b
+            sqlcmd -S $SqlServer -E -i "$restoreSqlPath" -b
             if ($LASTEXITCODE -eq 0) {
                 Write-Host '  UserAccounts database dropped' -ForegroundColor Green
             } else {

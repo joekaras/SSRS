@@ -3,13 +3,18 @@
 # Tests actual login functionality with test users
 
 param(
-    [string]$LoginUrl = 'http://vmlenovo/ReportServer/logon.aspx',
-    [string]$ReportServerUrl = 'http://vmlenovo/ReportServer',
+    [string]$LoginUrl        = '',   # auto-detected from Environment.ps1
+    [string]$ReportServerUrl = '',   # auto-detected from Environment.ps1
     [switch]$Verbose
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+. (Join-Path $PSScriptRoot 'Environment.ps1')
+$_prof = Get-ServerProfile
+if (-not $LoginUrl)        { $LoginUrl        = $_prof.LogonUrl }
+if (-not $ReportServerUrl) { $ReportServerUrl = $_prof.ReportServerUrl }
 
 Write-Host '================================================' -ForegroundColor Cyan
 Write-Host 'SSRS Login Functionality Test' -ForegroundColor Cyan

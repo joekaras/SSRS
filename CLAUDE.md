@@ -6,15 +6,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 .NET Framework 4.8 · SSRS 2019 Native Mode · Custom Security Extension · Forms Authentication
 
-This repository contains a **deployed SSRS 2019 Custom Security Extension** (Forms Authentication) based on the Microsoft sample, customized for production use on `VMLENOVO`. The `BP360Security/` folder is the active codebase. The `prompts/` folder contains design prompts for future portal work.
+This repository contains a **deployed SSRS 2019 Custom Security Extension** (Forms Authentication) based on the Microsoft sample, customized for production use. The `BP360Security/` folder is the active codebase. The `prompts/` folder contains design prompts for future portal work.
 
-### Deployed Environment
+### Deployed Environments
 
-- **Host**: `VMLENOVO` (Windows Server, IIS)
-- **SSRS install**: `C:\Program Files\Microsoft SQL Server Reporting Services\SSRS\`
-- **Service account**: `VMLENOVO\ssrssvc` (runs both RSHostingService and SQL Server)
-- **Portal URL**: `http://vmlenovo/Reports`
-- **ReportServer URL**: `http://vmlenovo/ReportServer`
+This codebase runs on two independent servers. Each developer clones the same repo locally and deploys to their server. Scripts auto-detect the server via `$env:COMPUTERNAME` using `scripts\Environment.ps1`.
+
+| Setting | VMLENOVO | VWMAZBPTESTBP360 |
+|---------|----------|-----------------|
+| SSRS service account | `VMLENOVO\ssrssvc` | `vwmazbptestbp360\bp360svcc` |
+| DB service account | `VMLENOVO\ssrssvc` | `vwmazbptestbp360\bp360svcc` |
+| SQL Server | localhost | localhost |
+| Portal URL | `http://vmlenovo/Reports` | `http://vwmazbptestbp360/Reports` |
+| ReportServer URL | `http://vmlenovo/ReportServer` | `http://vwmazbptestbp360/ReportServer` |
+
+**Important**: Developers log in with their own domain accounts, but the SSRS **service account** is what gets granted DB permissions (`EXECUTE` on `LookupUser`/`RegisterUser`). Never grant those permissions to a developer's personal account.
+
+- **SSRS install** (both servers): `C:\Program Files\Microsoft SQL Server Reporting Services\SSRS\`
 - **User store**: SQL Server `UserAccounts` database (localhost, Integrated Security)
 - **Auth cookie**: `sqlAuthCookie` (Forms Authentication, 60-min timeout)
 

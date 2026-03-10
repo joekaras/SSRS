@@ -13,12 +13,17 @@
 param(
     [ValidateSet('Verbose', 'Info', 'Warning', 'Error', 'Off')]
     [string]$Level = 'Info',
-    [string]$SsrsRoot = 'C:\Program Files\Microsoft SQL Server Reporting Services',
+    [string]$SsrsRoot = '',   # auto-detected from Environment.ps1
     [switch]$Status
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+# ── Auto-detect server environment ────────────────────────────────────────
+. (Join-Path $PSScriptRoot 'Environment.ps1')
+$_prof = Get-ServerProfile
+if (-not $SsrsRoot) { $SsrsRoot = $_prof.SsrsInstallRoot }
 
 $principal = [Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
 if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {

@@ -11,17 +11,24 @@
 # Optionally grants service account file permissions and starts SSRS.
 
 param(
-    [string]$SsrsRoot       = 'C:\Program Files\Microsoft SQL Server Reporting Services',
-    [string]$SqlServer      = 'localhost',
-    [string]$ServiceAccount = '',       # e.g. "VMLENOVO\ssrssvc"
-    [string]$ValidationKey  = '',       # leave blank to auto-generate
-    [string]$DecryptionKey  = '',       # leave blank to auto-generate
+    [string]$SsrsRoot       = '',   # auto-detected from Environment.ps1
+    [string]$SqlServer      = '',   # auto-detected from Environment.ps1
+    [string]$ServiceAccount = '',   # SSRS service account — auto-detected from Environment.ps1
+    [string]$ValidationKey  = '',   # leave blank to auto-generate
+    [string]$DecryptionKey  = '',   # leave blank to auto-generate
     [string]$AdminUser      = 'admin',  # username given Content Manager role in SSRS
     [switch]$StartService
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+# ── Auto-detect server environment ────────────────────────────────────────
+. (Join-Path $PSScriptRoot 'Environment.ps1')
+$_prof = Get-ServerProfile
+if (-not $SsrsRoot)       { $SsrsRoot       = $_prof.SsrsInstallRoot }
+if (-not $SqlServer)      { $SqlServer       = $_prof.SqlServer }
+if (-not $ServiceAccount) { $ServiceAccount  = $_prof.ServiceAccount }
 
 $principal = [Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
 if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
@@ -369,7 +376,7 @@ Write-Host ''
 Write-Host '================================================' -ForegroundColor Cyan
 Write-Host 'Configuration complete.' -ForegroundColor Cyan
 Write-Host "  Keys saved : $keyFile" -ForegroundColor White
-Write-Host '  Portal URL : http://vmlenovo/Reports' -ForegroundColor White
+Write-Host "  Portal URL : $($_prof.PortalUrl)" -ForegroundColor White
 if (-not $StartService) {
     Write-Host '  Start SSRS : Restart-Service SQLServerReportingServices' -ForegroundColor Yellow
 }

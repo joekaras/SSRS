@@ -4,12 +4,19 @@
 # Used to validate successful rollback to Windows Authentication or deployment status.
 
 param(
-    [string]$ServerUrl = 'http://vmlenovo',
+    [string]$ServerUrl = '',   # auto-detected from Environment.ps1
     [switch]$Verbose
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+. (Join-Path $PSScriptRoot 'Environment.ps1')
+$_prof = Get-ServerProfile
+if (-not $ServerUrl) {
+    # Derive base URL from ReportServerUrl (strip /ReportServer suffix)
+    $ServerUrl = $_prof.ReportServerUrl -replace '/ReportServer$', ''
+}
 
 Write-Host '================================================' -ForegroundColor Cyan
 Write-Host 'SSRS Endpoints Test' -ForegroundColor Cyan

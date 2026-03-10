@@ -3,8 +3,8 @@
 # Registers users in the UserAccounts database for custom security authentication.
 
 param(
-    [string]$SqlServer = 'localhost',
-    [string]$Database = 'UserAccounts',
+    [string]$SqlServer = '',   # auto-detected from Environment.ps1
+    [string]$Database  = 'UserAccounts',
     [string]$UserName,
     [string]$Password,
     [switch]$CreateTestUsers,
@@ -13,6 +13,11 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+# ── Auto-detect server environment ────────────────────────────────────────
+. (Join-Path $PSScriptRoot 'Environment.ps1')
+$_prof = Get-ServerProfile
+if (-not $SqlServer) { $SqlServer = $_prof.SqlServer }
 
 # ---------------------------------------------------------------------------
 # Helper: Generate password hash + salt (matches AuthenticationUtilities.cs)

@@ -3,19 +3,26 @@
 # Creates a timestamped subfolder under .\backups\ with subfolders mirroring source locations.
 
 param(
-    [string]$SsrsRoot = 'C:\Program Files\Microsoft SQL Server Reporting Services\SSRS',
+    [string]$SsrsRoot   = '',   # SSRS install root (without \SSRS) — auto-detected from Environment.ps1
     [string]$BackupRoot = "$PSScriptRoot\..\backups"
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+# ── Auto-detect server environment ────────────────────────────────────────
+. (Join-Path $PSScriptRoot 'Environment.ps1')
+$_prof = Get-ServerProfile
+if (-not $SsrsRoot) { $SsrsRoot = $_prof.SsrsInstallRoot }
+
+$ssrsDir = Join-Path $SsrsRoot 'SSRS'
+
 # Files to back up: @{ Source = full path; SubFolder = subfolder name under backup dir }
 $files = @(
-    @{ Source = "$SsrsRoot\ReportServer\rsreportserver.config"; SubFolder = 'ReportServer' }
-    @{ Source = "$SsrsRoot\ReportServer\web.config";            SubFolder = 'ReportServer' }
-    @{ Source = "$SsrsRoot\ReportServer\rssrvpolicy.config";    SubFolder = 'ReportServer' }
-    @{ Source = "$SsrsRoot\Portal\RSPortal.exe.config";         SubFolder = 'Portal'       }
+    @{ Source = "$ssrsDir\ReportServer\rsreportserver.config"; SubFolder = 'ReportServer' }
+    @{ Source = "$ssrsDir\ReportServer\web.config";            SubFolder = 'ReportServer' }
+    @{ Source = "$ssrsDir\ReportServer\rssrvpolicy.config";    SubFolder = 'ReportServer' }
+    @{ Source = "$ssrsDir\Portal\RSPortal.exe.config";           SubFolder = 'Portal'       }
 )
 
 # Create timestamped backup folder

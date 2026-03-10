@@ -4,17 +4,23 @@
 # Tests login page, authentication, and SSRS endpoints.
 
 param(
-    [string]$LoginUrl = 'http://vmlenovo/ReportServer/logon.aspx',
-    [string]$ReportServerUrl = 'http://vmlenovo/ReportServer',
-    [string]$ReportsUrl = 'http://vmlenovo/Reports',
-    [string]$TestUser = 'testuser',
-    [string]$TestPassword = 'Test@123',
+    [string]$LoginUrl       = '',   # auto-detected from Environment.ps1
+    [string]$ReportServerUrl = '',  # auto-detected from Environment.ps1
+    [string]$ReportsUrl     = '',   # auto-detected from Environment.ps1
+    [string]$TestUser       = 'testuser',
+    [string]$TestPassword   = 'Test@123',
     [switch]$SkipAuthTest,
     [switch]$Verbose
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+. (Join-Path $PSScriptRoot 'Environment.ps1')
+$_prof = Get-ServerProfile
+if (-not $LoginUrl)        { $LoginUrl        = $_prof.LogonUrl }
+if (-not $ReportServerUrl) { $ReportServerUrl = $_prof.ReportServerUrl }
+if (-not $ReportsUrl)      { $ReportsUrl      = $_prof.PortalUrl }
 
 Write-Host '================================================' -ForegroundColor Cyan
 Write-Host 'SSRS Forms Authentication Smoke Test' -ForegroundColor Cyan

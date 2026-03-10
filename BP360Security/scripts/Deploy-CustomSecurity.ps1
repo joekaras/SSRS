@@ -1,11 +1,17 @@
 # Deploy-CustomSecurity.ps1
 # Deploys the SSRS Custom Security Extension for SSRS 2019 Native Mode.
 # No IIS required — SSRS self-hosts the portal and ReportServer via HTTP.sys.
+#
+# USAGE:
+#   Run as Administrator on the target server.
+#   Defaults are auto-detected from Environment.ps1 based on $env:COMPUTERNAME.
+#   Override any param explicitly if needed:
+#     .\Deploy-CustomSecurity.ps1 -ServiceAccount "DOMAIN\svc" -SkipDatabase
 
 param(
-    [string]$SsrsRoot      = 'C:\Program Files\Microsoft SQL Server Reporting Services',
-    [string]$SqlServer     = 'localhost',
-    [string]$ServiceAccount = '',   # e.g. "VMLENOVO\ssrssvc" — leave blank to prompt
+    [string]$SsrsRoot       = '',   # auto-detected from Environment.ps1
+    [string]$SqlServer      = '',   # auto-detected from Environment.ps1
+    [string]$ServiceAccount = '',   # SSRS service account — NOT the developer's login
     [switch]$SkipBuild,
     [switch]$SkipDatabase
 )
@@ -18,6 +24,13 @@ if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administra
     Write-Error 'This script must be run as Administrator.'
     exit 1
 }
+
+# ── Auto-detect server environment ────────────────────────────────────────
+. (Join-Path $PSScriptRoot 'Environment.ps1')
+$_prof = Get-ServerProfile
+if (-not $SsrsRoot)       { $SsrsRoot       = $_prof.SsrsInstallRoot }
+if (-not $SqlServer)      { $SqlServer       = $_prof.SqlServer }
+if (-not $ServiceAccount) { $ServiceAccount  = $_prof.ServiceAccount }
 
 $repoRoot       = Split-Path -Parent $PSScriptRoot
 $projectFile    = Join-Path $repoRoot 'BP360Security.csproj'
@@ -32,18 +45,16 @@ $serviceName    = 'SQLServerReportingServices'
 
 Write-Host '================================================' -ForegroundColor Cyan
 Write-Host 'SSRS 2019 Custom Security Deployment' -ForegroundColor Cyan
+Write-Host "Server          : $env:COMPUTERNAME" -ForegroundColor Cyan
+Write-Host "Service account : $ServiceAccount" -ForegroundColor Cyan
+Write-Host "SQL Server      : $SqlServer" -ForegroundColor Cyan
 Write-Host '================================================' -ForegroundColor Cyan
 Write-Host ''
 
-# Resolve service account
+# Warn if service account is blank (unknown server)
 if ([string]::IsNullOrWhiteSpace($ServiceAccount)) {
-    $svc = Get-WmiObject Win32_Service -Filter "Name='$serviceName'" -ErrorAction SilentlyContinue
-    if ($svc) {
-        $ServiceAccount = $svc.StartName
-        Write-Host "Detected service account: $ServiceAccount" -ForegroundColor Gray
-    } else {
-        $ServiceAccount = Read-Host 'Enter SSRS service account (e.g. DOMAIN\ssrssvc)'
-    }
+    Write-Warning 'Service account not resolved. Add this server to Environment.ps1 or pass -ServiceAccount explicitly.'
+    $ServiceAccount = Read-Host 'Enter SSRS service account (e.g. DOMAIN\ssrssvc)'
 }
 
 # ---------------------------------------------------------------------------
@@ -105,6 +116,8 @@ if ($SkipDatabase) {
 
 # ---------------------------------------------------------------------------
 # Step 3: Grant service account access to UserAccounts DB
+# NOTE: This grants permissions to the SSRS service account ($ServiceAccount),
+#       NOT to the developer running this script. Those are different accounts.
 # ---------------------------------------------------------------------------
 Write-Host '[3/8] Granting DB access to service account' -ForegroundColor Yellow
 
@@ -135,7 +148,7 @@ Write-Host '[4/8] Backing up configuration files' -ForegroundColor Yellow
 
 $backupScript = Join-Path $PSScriptRoot 'Backup-Config.ps1'
 if (Test-Path $backupScript) {
-    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $backupScript -SsrsRoot (Join-Path $SsrsRoot 'SSRS')
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $backupScript -SsrsRoot $SsrsRoot
     if ($LASTEXITCODE -ne 0) { Write-Warning 'Backup reported errors — continuing anyway' }
 } else {
     Write-Warning "Backup-Config.ps1 not found at $backupScript — skipping backup"
@@ -159,7 +172,6 @@ if ($svc -and $svc.Status -eq 'Running') {
 # ---------------------------------------------------------------------------
 Write-Host '[6/8] Copying files to SSRS directories' -ForegroundColor Yellow
 
-# DLL to ReportServer\bin
 foreach ($f in @($builtDll, $builtPdb)) {
     if (Test-Path $f) {
         Copy-Item $f -Destination $rssBinDir -Force
@@ -167,7 +179,6 @@ foreach ($f in @($builtDll, $builtPdb)) {
     }
 }
 
-# DLL to Portal
 foreach ($f in @($builtDll, $builtPdb)) {
     if (Test-Path $f) {
         Copy-Item $f -Destination $portalDir -Force
@@ -175,7 +186,6 @@ foreach ($f in @($builtDll, $builtPdb)) {
     }
 }
 
-# Logon.aspx to ReportServer
 $logonSrc = Join-Path $repoRoot 'Logon.aspx'
 if (Test-Path $logonSrc) {
     Copy-Item $logonSrc -Destination $rsDir -Force
@@ -237,7 +247,7 @@ Write-Host '================================================' -ForegroundColor C
 Write-Host 'Deployment complete.' -ForegroundColor Green
 Write-Host ''
 Write-Host 'Next steps:' -ForegroundColor Cyan
-Write-Host '  1. Open browser: http://vmlenovo/Reports' -ForegroundColor White
+Write-Host "  1. Open browser: $($_prof.PortalUrl)" -ForegroundColor White
 Write-Host '  2. Log in with a registered user account' -ForegroundColor White
-Write-Host '  3. Check logs if issues: <SsrsRoot>\SSRS\LogFiles\RSPortal_*.log' -ForegroundColor White
+Write-Host "  3. Check logs if issues: $SsrsRoot\SSRS\LogFiles\RSPortal_*.log" -ForegroundColor White
 Write-Host '================================================' -ForegroundColor Cyan

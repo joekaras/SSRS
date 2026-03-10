@@ -65,13 +65,42 @@ Copy the compiled DLL (and PDB) to two locations:
 
 ---
 
-## Step 5: Copy Logon.aspx
+## Step 5: Copy Logon.aspx and UILogon.aspx
 
-Copy `Logon.aspx` (and `Logon.aspx.cs` if present) to:
+Copy both pages (and their `.cs` code-behind files) to the ReportServer virtual directory:
 
 ```
 <install>\ReportServer\Logon.aspx
+<install>\ReportServer\Logon.aspx.cs
+<install>\ReportServer\UILogon.aspx
+<install>\ReportServer\UILogon.aspx.cs
 ```
+
+`UILogon.aspx` is the server-to-server login endpoint used by the BancPac WPF client.
+
+---
+
+## Step 5b: Configure UILogon shared keys
+
+Add the following to `<install>\ReportServer\bin\BancPac.ReportingServices.BP360.dll.config`
+under `<appSettings>`:
+
+```xml
+<appSettings>
+  <!-- UILogon.Key1: WPF client posts this key; username = BNBR-UID -->
+  <add key="UILogon.Key1" value="REPLACE_WITH_STRONG_RANDOM_KEY" />
+  <!-- UILogon.Key2: WPF client posts this key; username = UID only -->
+  <add key="UILogon.Key2" value="REPLACE_WITH_STRONG_RANDOM_KEY_2" />
+</appSettings>
+```
+
+Generate each key with:
+```powershell
+[System.Web.Security.Membership]::GeneratePassword(40, 10)
+```
+
+The same key values must be configured in the WPF client's `App.config` under `UILogon.Key`.
+See `WpfAuthHelper/INTEGRATION_GUIDE.md` for the full WPF integration.
 
 ---
 

@@ -33,7 +33,11 @@ This codebase runs on two independent servers. Each developer clones the same re
 **Extension components**:
 - `AuthenticationExtension.cs` — implements `IAuthenticationExtension2`; validates credentials against `UserAccounts.LookupUser` stored procedure
 - `Authorization.cs` — implements `IAuthorizationExtension`; admin configured via `rsreportserver.config`
-- `AuthenticationUtilities.cs` — SHA1+salt password hashing; connection string from `Properties.Settings.Default.Database_ConnectionString`
+- `AuthenticationUtilities.cs` — SHA1+salt password hashing; connection string from `Properties.Settings.Default.Database_ConnectionString`; includes `VerifyUser()` for existence check
+- `Logon.aspx` / `Logon.aspx.cs` — browser-facing login page in the ReportServer virtual directory
+- `UILogon.aspx` / `UILogon.aspx.cs` — server-to-server login endpoint for the BancPac WPF client; accepts POST with UID/PWD/BNBR/KEY; issues `sqlAuthCookie` directly via `FormsAuthentication.SetAuthCookie()`; shared keys stored in `appSettings` as `UILogon.Key1` / `UILogon.Key2`
+- `Logging/EventLogWriter.cs` — Windows Event Log wrapper (C# port of legacy `LogWriter.vb`)
+- `Logging/SecurityLog.cs` — lazy singleton logger; `SecurityLog.Info()` / `Warn()` / `Error()` used throughout extension
 
 **User store**: `UserAccounts` DB → `Users` table → `LookupUser` / `RegisterUser` stored procs.
 Password hashing: SHA1(password + Base64Salt), stored as uppercase hex.
@@ -78,8 +82,26 @@ The correct ASP.NET control IDs (required for any test scripts or automation):
 
 | Script | Purpose |
 |--------|---------|
+| `BP360Security/scripts/Deploy-CustomSecurity.ps1` | Full deploy: build → DB → backup → copy files → configure → restart |
+| `BP360Security/scripts/Build-CustomSecurity.ps1` | Build DLL only |
+| `BP360Security/scripts/Configure-CustomSecurity.ps1` | Patch configs, set file permissions, start service |
+| `BP360Security/scripts/Backup-Config.ps1` | Snapshot config files before changes |
 | `BP360Security/scripts/Setup-Users.ps1` | Register users in UserAccounts DB (use `-Integrated` flag) |
+| `BP360Security/scripts/Environment.ps1` | Server auto-detection; sourced by all other scripts |
+| `BP360Security/scripts/Rollback-CustomSecurity.ps1` | Restore config from backup |
 | `BP360Security/Setup/CreateUserStore.sql` | Create UserAccounts DB, tables, stored procs |
+
+## WPF Client Integration
+
+The BancPac WPF client connects to SSRS via `UILogon.aspx`. Reference implementation for migrating from the old `WebBrowser` (IE) control to `WebView2`:
+
+| File | Purpose |
+|------|---------|
+| `WpfAuthHelper/SsrsAuthHelper.cs` | Drop into WPF project; `LoginAsync()` handles POST + cookie injection |
+| `WpfAuthHelper/SsrsWebView2Window.xaml/cs` | Sample WPF window with login panel + WebView2 |
+| `WpfAuthHelper/INTEGRATION_GUIDE.md` | NuGet packages, config keys, auth flow diagram |
+
+**NuGet required in WPF project**: `Microsoft.Web.WebView2` (≥ 1.0.2210)
 
 **No IIS required**: SSRS 2019 Native Mode self-hosts both endpoints via HTTP.sys (URL reservations managed by Reporting Services Configuration Manager). IIS is only needed if a separate front-end proxy application is added.
 

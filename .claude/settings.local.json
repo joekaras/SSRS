@@ -35,7 +35,9 @@
       "Bash(/c/temp/check_svcacct.ps1:*)",
       "Bash(/c/temp/check_guest2.ps1:*)",
       "Bash(/c/temp/fix_perms2.ps1:*)",
-      "Bash(powershell:*)"
+      "Bash(powershell:*)",
+      "Read(//c/Users/joeka/OneDrive/Documents/GitHub/**)",
+      "Read(//c/Users/joeka/**)"
     ]
   }
 }

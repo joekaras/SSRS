@@ -25,6 +25,7 @@ USE UserAccounts
 GO
 CREATE TABLE [Users] (
   [UserName] [varchar] (255) NOT NULL ,
+  [BankNumber] [int] (20) NULL ,
   [PasswordHash] [varchar] (50) NOT NULL ,
   [salt] [varchar] (10) NOT NULL,
   CONSTRAINT [PK_Users] PRIMARY KEY  CLUSTERED

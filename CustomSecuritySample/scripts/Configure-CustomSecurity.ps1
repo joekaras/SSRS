@@ -37,10 +37,10 @@ $rsConfig       = Join-Path $rsDir 'rsreportserver.config'
 $rsWebConfig    = Join-Path $rsDir 'web.config'
 $rsPolicyConfig = Join-Path $rsDir 'rssrvpolicy.config'
 $portalConfig   = Join-Path $SsrsRoot 'SSRS\Portal\RSPortal.exe.config'
-$customDllPath  = Join-Path $rsDir "bin\Microsoft.Samples.ReportingServices.CustomSecurity.dll"
-$dllAssembly    = 'Microsoft.Samples.ReportingServices.CustomSecurity'
-$secType        = "Microsoft.Samples.ReportingServices.CustomSecurity.Authorization, $dllAssembly"
-$authType       = "Microsoft.Samples.ReportingServices.CustomSecurity.AuthenticationExtension, $dllAssembly"
+$customDllPath  = Join-Path $rsDir "bin\BancPac.ReportingServices.BP360.dll"
+$dllAssembly    = 'BancPac.ReportingServices.BP360'
+$secType        = "BancPac.ReportingServices.BP360.Authorization, $dllAssembly"
+$authType       = "BancPac.ReportingServices.BP360.AuthenticationExtension, $dllAssembly"
 
 foreach ($f in @($rsConfig, $rsWebConfig, $rsPolicyConfig)) {
     if (-not (Test-Path $f)) {

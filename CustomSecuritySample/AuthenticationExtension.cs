@@ -30,7 +30,7 @@ using Microsoft.ReportingServices.Interfaces;
 using System.Globalization;
 using System.Xml;
 
-namespace Microsoft.Samples.ReportingServices.CustomSecurity
+namespace BancPac.ReportingServices.BP360
 {
 
     public class AuthenticationExtension : IAuthenticationExtension2, IExtension

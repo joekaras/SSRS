@@ -23,8 +23,8 @@
 #   Generate-MachineKeys.ps1
 #   Set-Logging.ps1
 #   bin\
-#     Microsoft.Samples.ReportingServices.CustomSecurity.dll
-#     Microsoft.Samples.ReportingServices.CustomSecurity.pdb
+#     BancPac.ReportingServices.BP360.dll
+#     BancPac.ReportingServices.BP360.pdb
 #   web\
 #     Logon.aspx
 #     App_LocalResources\
@@ -46,7 +46,7 @@ $ErrorActionPreference = 'Stop'
 
 $repoRoot     = Split-Path -Parent $PSScriptRoot
 $buildOutput  = Join-Path $repoRoot 'bin\Release'
-$dllName      = 'Microsoft.Samples.ReportingServices.CustomSecurity.dll'
+$dllName      = 'BancPac.ReportingServices.BP360.dll'
 $dllPath      = Join-Path $buildOutput $dllName
 
 # ── Validate build output ──────────────────────────────────────────────────

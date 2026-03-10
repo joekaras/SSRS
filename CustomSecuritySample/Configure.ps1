@@ -4,20 +4,20 @@
 Write-Host "Copying Logon.aspx page `n" -ForegroundColor Green
 Copy-Item -Path Logon.aspx -Destination "C:\Program Files\Microsoft Power BI Report Server\PBIRS\ReportServer\"
 
-Write-Host "Copying Microsoft.Samples.ReportingServices.CustomSecurity.dll `n" -ForegroundColor Green
-Copy-Item -Path Microsoft.Samples.ReportingServices.CustomSecurity.dll -Destination "C:\Program Files\Microsoft Power BI Report Server\PBIRS\ReportServer\Bin\"
-Copy-Item -Path Microsoft.Samples.ReportingServices.CustomSecurity.dll -Destination "C:\Program Files\Microsoft Power BI Report Server\PBIRS\Portal\"
-Copy-Item -Path Microsoft.Samples.ReportingServices.CustomSecurity.dll -Destination "C:\Program Files\Microsoft Power BI Report Server\PBIRS\PowerBi"
+Write-Host "Copying BancPac.ReportingServices.BP360.dll `n" -ForegroundColor Green
+Copy-Item -Path BancPac.ReportingServices.BP360.dll -Destination "C:\Program Files\Microsoft Power BI Report Server\PBIRS\ReportServer\Bin\"
+Copy-Item -Path BancPac.ReportingServices.BP360.dll -Destination "C:\Program Files\Microsoft Power BI Report Server\PBIRS\Portal\"
+Copy-Item -Path BancPac.ReportingServices.BP360.dll -Destination "C:\Program Files\Microsoft Power BI Report Server\PBIRS\PowerBi"
 
-Write-Host "Copying Microsoft.Samples.ReportingServices.CustomSecurity.dll.config `n" -ForegroundColor Green
-Copy-Item -Path Microsoft.Samples.ReportingServices.CustomSecurity.dll.config -Destination "C:\Program Files\Microsoft Power BI Report Server\PBIRS\ReportServer\Bin\"
-Copy-Item -Path Microsoft.Samples.ReportingServices.CustomSecurity.dll.config -Destination "C:\Program Files\Microsoft Power BI Report Server\PBIRS\Portal\"
-Copy-Item -Path Microsoft.Samples.ReportingServices.CustomSecurity.dll.config -Destination "C:\Program Files\Microsoft Power BI Report Server\PBIRS\PowerBi"
+Write-Host "Copying BancPac.ReportingServices.BP360.dll.config `n" -ForegroundColor Green
+Copy-Item -Path BancPac.ReportingServices.BP360.dll.config -Destination "C:\Program Files\Microsoft Power BI Report Server\PBIRS\ReportServer\Bin\"
+Copy-Item -Path BancPac.ReportingServices.BP360.dll.config -Destination "C:\Program Files\Microsoft Power BI Report Server\PBIRS\Portal\"
+Copy-Item -Path BancPac.ReportingServices.BP360.dll.config -Destination "C:\Program Files\Microsoft Power BI Report Server\PBIRS\PowerBi"
 
-Write-Host "Copying Microsoft.Samples.ReportingServices.CustomSecurity.pdb `n" -ForegroundColor Green
-Copy-Item -Path Microsoft.Samples.ReportingServices.CustomSecurity.pdb -Destination "C:\Program Files\Microsoft Power BI Report Server\PBIRS\ReportServer\Bin\"
-Copy-Item -Path Microsoft.Samples.ReportingServices.CustomSecurity.pdb -Destination "C:\Program Files\Microsoft Power BI Report Server\PBIRS\Portal\"
-Copy-Item -Path Microsoft.Samples.ReportingServices.CustomSecurity.pdb -Destination "C:\Program Files\Microsoft Power BI Report Server\PBIRS\PowerBi"
+Write-Host "Copying BancPac.ReportingServices.BP360.pdb `n" -ForegroundColor Green
+Copy-Item -Path BancPac.ReportingServices.BP360.pdb -Destination "C:\Program Files\Microsoft Power BI Report Server\PBIRS\ReportServer\Bin\"
+Copy-Item -Path BancPac.ReportingServices.BP360.pdb -Destination "C:\Program Files\Microsoft Power BI Report Server\PBIRS\Portal\"
+Copy-Item -Path BancPac.ReportingServices.BP360.pdb -Destination "C:\Program Files\Microsoft Power BI Report Server\PBIRS\PowerBi"
 
 Write-Host "Updating rsreportserver.config `n" -ForegroundColor Green
 $rsConfigFilePath = "C:\Program Files\Microsoft Power BI Report Server\PBIRS\ReportServer\rsreportserver.config"
@@ -28,13 +28,13 @@ $rsConfigFile.Configuration.Authentication.AuthenticationTypes.InnerXml = "<Cust
 
 $extension = $rsConfigFile.CreateElement("Extension")
 $extension.SetAttribute("Name","Forms")
-$extension.SetAttribute("Type","Microsoft.Samples.ReportingServices.CustomSecurity.Authorization, Microsoft.Samples.ReportingServices.CustomSecurity")
+$extension.SetAttribute("Type","BancPac.ReportingServices.BP360.Authorization, BancPac.ReportingServices.BP360")
 $configuration =$rsConfigFile.CreateElement("Configuration")
 $configuration.InnerXml="<AdminConfiguration>`n<UserName>username</UserName>`n</AdminConfiguration>"
 $extension.AppendChild($configuration)
 $rsConfigFile.Configuration.Extensions.Security.AppendChild($extension)
 $rsConfigFile.Configuration.Extensions.Authentication.Extension.Name ="Forms"
-$rsConfigFile.Configuration.Extensions.Authentication.Extension.Type ="Microsoft.Samples.ReportingServices.CustomSecurity.AuthenticationExtension,Microsoft.Samples.ReportingServices.CustomSecurity"
+$rsConfigFile.Configuration.Extensions.Authentication.Extension.Type ="BancPac.ReportingServices.BP360.AuthenticationExtension,BancPac.ReportingServices.BP360"
 
 $rsConfigFile.Save($rsConfigFilePath)
 
@@ -50,7 +50,7 @@ $codeGroup.SetAttribute("version","1")
 $codeGroup.SetAttribute("Name","SecurityExtensionCodeGroup")
 $codeGroup.SetAttribute("Description","Code group for the sample security extension")
 $codeGroup.SetAttribute("PermissionSetName","FullTrust")
-$codeGroup.InnerXml ="<IMembershipCondition class=""UrlMembershipCondition"" version=""1"" Url=""C:\Program Files\Microsoft Power BI Report Server\PBIRS\ReportServer\bin\Microsoft.Samples.ReportingServices.CustomSecurity.dll""/>"
+$codeGroup.InnerXml ="<IMembershipCondition class=""UrlMembershipCondition"" version=""1"" Url=""C:\Program Files\Microsoft Power BI Report Server\PBIRS\ReportServer\bin\BancPac.ReportingServices.BP360.dll""/>"
 $rsPolicy.Configuration.mscorlib.security.policy.policylevel.CodeGroup.CodeGroup.AppendChild($codeGroup)
 $rsPolicy.Save($rsPolicyFilePath)
 

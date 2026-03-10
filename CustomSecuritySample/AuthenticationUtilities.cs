@@ -32,7 +32,7 @@ using System.Xml;
 using System.Text;
 using System.Globalization;
 
-namespace Microsoft.Samples.ReportingServices.CustomSecurity
+namespace BancPac.ReportingServices.BP360
 {
    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1812:AvoidUninstantiatedInternalClasses")]
    internal sealed class AuthenticationUtilities

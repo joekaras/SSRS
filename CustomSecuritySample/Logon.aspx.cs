@@ -34,10 +34,10 @@ using System.Data.SqlClient;
 using System.Security.Cryptography;
 using System.Web.Security;
 using Microsoft.ReportingServices.Interfaces;
-using Microsoft.Samples.ReportingServices.CustomSecurity.App_LocalResources;
+using BancPac.ReportingServices.BP360.App_LocalResources;
 using System.Globalization;
 
-namespace Microsoft.Samples.ReportingServices.CustomSecurity
+namespace BancPac.ReportingServices.BP360
 {
    public class Logon : System.Web.UI.Page
    {

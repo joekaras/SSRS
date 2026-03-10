@@ -10,7 +10,7 @@ param(
 Set-StrictMode -Version Latest
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$projectPath = Join-Path $repoRoot 'CustomSecurity.csproj'
+$projectPath = Join-Path $repoRoot 'BP360Security.csproj'
 
 Write-Host "Building CustomSecurity extension..." -ForegroundColor Cyan
 Write-Host "Configuration: $Configuration" -ForegroundColor Gray
@@ -48,7 +48,7 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Host "Build succeeded." -ForegroundColor Green
 
-$outputPath = Join-Path $repoRoot "bin\$Configuration\Microsoft.Samples.ReportingServices.CustomSecurity.dll"
+$outputPath = Join-Path $repoRoot "bin\$Configuration\BancPac.ReportingServices.BP360.dll"
 if (Test-Path $outputPath) {
     $fileInfo = Get-Item $outputPath
     Write-Host "Output: $outputPath" -ForegroundColor Cyan

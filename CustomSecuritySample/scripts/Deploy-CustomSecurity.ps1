@@ -20,9 +20,9 @@ if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administra
 }
 
 $repoRoot       = Split-Path -Parent $PSScriptRoot
-$projectFile    = Join-Path $repoRoot 'CustomSecurity.csproj'
-$dllName        = 'Microsoft.Samples.ReportingServices.CustomSecurity.dll'
-$pdbName        = 'Microsoft.Samples.ReportingServices.CustomSecurity.pdb'
+$projectFile    = Join-Path $repoRoot 'BP360Security.csproj'
+$dllName        = 'BancPac.ReportingServices.BP360.dll'
+$pdbName        = 'BancPac.ReportingServices.BP360.pdb'
 $builtDll       = Join-Path $repoRoot "bin\Release\$dllName"
 $builtPdb       = Join-Path $repoRoot "bin\Release\$pdbName"
 $rsDir          = Join-Path $SsrsRoot 'SSRS\ReportServer'

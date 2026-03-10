@@ -32,7 +32,7 @@ using System.Runtime.Serialization.Formatters.Binary;
 using Microsoft.ReportingServices.Interfaces;
 using System.Xml;
 
-namespace Microsoft.Samples.ReportingServices.CustomSecurity
+namespace BancPac.ReportingServices.BP360
 {
    public class Authorization: IAuthorizationExtension
    {

@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace Microsoft.Samples.ReportingServices.CustomSecurity.App_LocalResources {
+namespace BancPac.ReportingServices.BP360.App_LocalResources {
     using System;
     
     
@@ -39,7 +39,7 @@ namespace Microsoft.Samples.ReportingServices.CustomSecurity.App_LocalResources 
         internal static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
-                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("Microsoft.Samples.ReportingServices.CustomSecurity.App_LocalResources.Logon.aspx", typeof(Logon_aspx).Assembly);
+                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("BancPac.ReportingServices.BP360.App_LocalResources.Logon.aspx", typeof(Logon_aspx).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;

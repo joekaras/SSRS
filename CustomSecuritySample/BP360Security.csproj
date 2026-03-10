@@ -11,7 +11,7 @@
     </ApplicationIcon>
     <AssemblyKeyContainerName>
     </AssemblyKeyContainerName>
-    <AssemblyName>Microsoft.Samples.ReportingServices.CustomSecurity</AssemblyName>
+    <AssemblyName>BancPac.ReportingServices.BP360</AssemblyName>
     <AssemblyOriginatorKeyFile>
     </AssemblyOriginatorKeyFile>
     <DefaultClientScript>JScript</DefaultClientScript>
@@ -19,7 +19,7 @@
     <DefaultTargetSchema>IE50</DefaultTargetSchema>
     <DelaySign>false</DelaySign>
     <OutputType>Library</OutputType>
-    <RootNamespace>Microsoft.Samples.ReportingServices.CustomSecurity</RootNamespace>
+    <RootNamespace>BancPac.ReportingServices.BP360</RootNamespace>
     <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
     <StartupObject>
     </StartupObject>
@@ -331,7 +331,7 @@
       <CachedDynamicPropName>
       </CachedDynamicPropName>
       <CachedAppSettingsObjectName>Settings</CachedAppSettingsObjectName>
-      <CachedSettingsPropName>Microsoft_Samples_ReportingServices_CustomSecurity_localhost_ReportingService2010</CachedSettingsPropName>
+      <CachedSettingsPropName>BancPac_ReportingServices_BP360_localhost_ReportingService2010</CachedSettingsPropName>
     </WebReferenceUrl>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />

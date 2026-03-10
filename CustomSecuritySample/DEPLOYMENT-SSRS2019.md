@@ -50,7 +50,7 @@ GRANT EXECUTE ON dbo.RegisterUser TO [VMLENOVO\ssrssvc];
 
 Open `CustomSecuritySample.sln` in Visual Studio and build in Release mode.
 
-Output DLL: `Microsoft.Samples.ReportingServices.CustomSecurity.dll`
+Output DLL: `BancPac.ReportingServices.BP360.dll`
 
 ---
 
@@ -59,8 +59,8 @@ Output DLL: `Microsoft.Samples.ReportingServices.CustomSecurity.dll`
 Copy the compiled DLL (and PDB) to two locations:
 
 ```
-<install>\ReportServer\bin\Microsoft.Samples.ReportingServices.CustomSecurity.dll
-<install>\Portal\Microsoft.Samples.ReportingServices.CustomSecurity.dll
+<install>\ReportServer\bin\BancPac.ReportingServices.BP360.dll
+<install>\Portal\BancPac.ReportingServices.BP360.dll
 ```
 
 ---
@@ -99,8 +99,8 @@ Inside the `<Extensions>` element:
 ```xml
 <Security>
   <Extension Name="Forms"
-    Type="Microsoft.Samples.ReportingServices.CustomSecurity.Authorization,
-          Microsoft.Samples.ReportingServices.CustomSecurity">
+    Type="BancPac.ReportingServices.BP360.Authorization,
+          BancPac.ReportingServices.BP360">
     <Configuration>
       <AdminConfiguration>
         <UserName>admin</UserName>
@@ -111,8 +111,8 @@ Inside the `<Extensions>` element:
 
 <Authentication>
   <Extension Name="Forms"
-    Type="Microsoft.Samples.ReportingServices.CustomSecurity.AuthenticationExtension,
-          Microsoft.Samples.ReportingServices.CustomSecurity" />
+    Type="BancPac.ReportingServices.BP360.AuthenticationExtension,
+          BancPac.ReportingServices.BP360" />
 </Authentication>
 ```
 
@@ -206,7 +206,7 @@ Add a FullTrust CodeGroup for the custom security DLL. Inside the `MyComputer` `
   <IMembershipCondition
     class="UrlMembershipCondition"
     version="1"
-    Url="C:\Program Files\Microsoft SQL Server Reporting Services\SSRS\ReportServer\bin\Microsoft.Samples.ReportingServices.CustomSecurity.dll" />
+    Url="C:\Program Files\Microsoft SQL Server Reporting Services\SSRS\ReportServer\bin\BancPac.ReportingServices.BP360.dll" />
 </CodeGroup>
 ```
 

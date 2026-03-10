@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace Microsoft.Samples.ReportingServices.CustomSecurity.Properties {
+namespace BancPac.ReportingServices.BP360.Properties {
     
     
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
@@ -27,9 +27,9 @@ namespace Microsoft.Samples.ReportingServices.CustomSecurity.Properties {
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.SpecialSettingAttribute(global::System.Configuration.SpecialSetting.WebServiceUrl)]
         [global::System.Configuration.DefaultSettingValueAttribute("http://localhost:80/ReportServer_SQL2014/ReportService2010.asmx")]
-        public string Microsoft_Samples_ReportingServices_CustomSecurity_localhost_ReportingService2010 {
+        public string BancPac_ReportingServices_BP360_localhost_ReportingService2010 {
             get {
-                return ((string)(this["Microsoft_Samples_ReportingServices_CustomSecurity_localhost_ReportingService2010" +
+                return ((string)(this["BancPac_ReportingServices_BP360_localhost_ReportingService2010" +
                     ""]));
             }
         }

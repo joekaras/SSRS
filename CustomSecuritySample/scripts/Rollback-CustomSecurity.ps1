@@ -82,8 +82,8 @@ foreach ($entry in $restoreMap) {
 }
 
 Write-Host '[3/8] Removing CustomSecurity DLLs' -ForegroundColor Yellow
-$dllName = 'Microsoft.Samples.ReportingServices.CustomSecurity.dll'
-$pdbName = 'Microsoft.Samples.ReportingServices.CustomSecurity.pdb'
+$dllName = 'BancPac.ReportingServices.BP360.dll'
+$pdbName = 'BancPac.ReportingServices.BP360.pdb'
 $dllsToRemove = @(
     Join-Path $SSRSPath "SSRS\ReportServer\bin\$dllName"
     Join-Path $SSRSPath "SSRS\ReportServer\bin\$pdbName"

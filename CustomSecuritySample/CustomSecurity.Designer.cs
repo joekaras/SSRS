@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace Microsoft.Samples.ReportingServices.CustomSecurity {
+namespace BancPac.ReportingServices.BP360 {
     using System;
     
     
@@ -39,7 +39,7 @@ namespace Microsoft.Samples.ReportingServices.CustomSecurity {
         internal static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
-                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("Microsoft.Samples.ReportingServices.CustomSecurity.CustomSecurity", typeof(CustomSecurity).Assembly);
+                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("BancPac.ReportingServices.BP360.CustomSecurity", typeof(CustomSecurity).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;

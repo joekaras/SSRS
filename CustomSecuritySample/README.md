@@ -73,9 +73,9 @@ The basic configurations needed for custom security extension are the same as pr
 
 To deploy the sample
 -	Copy the Logon.aspx page to the ```<install>\ReportServer directory```. 
--	Copy Microsoft.Samples.ReportingServices.CustomSecurity.dll and Microsoft.Samples.ReportingServices.CustomSecurity.pdb to the ```<install>\ReportServer\bin``` directory. 
--	Copy Microsoft.Samples.ReportingServices.CustomSecurity.dll and Microsoft.Samples.ReportingServices.CustomSecurity.pdb to the ```<install>\Portal``` directory. 
--   Copy Microsoft.Samples.ReportingServices.CustomSecurity.dll and Microsoft.Samples.ReportingServices.CustomSecurity.pdb to the ```<install>\PowerBI``` directory. (This only needs to be done for Power BI Report Server.)
+-	Copy BancPac.ReportingServices.BP360.dll and BancPac.ReportingServices.BP360.pdb to the ```<install>\ReportServer\bin``` directory. 
+-	Copy BancPac.ReportingServices.BP360.dll and BancPac.ReportingServices.BP360.pdb to the ```<install>\Portal``` directory. 
+-   Copy BancPac.ReportingServices.BP360.dll and BancPac.ReportingServices.BP360.pdb to the ```<install>\PowerBI``` directory. (This only needs to be done for Power BI Report Server.)
 
 If a PDB file is not present, it was not created by the Build step provided above. Ensure that the Project Properties for Debug/Build is set to generate PDB files. 
 	
@@ -99,7 +99,7 @@ Modify files in the ReportServer Folder
 
 	```xml
 	<Security>
-		<Extension Name="Forms" Type="Microsoft.Samples.ReportingServices.CustomSecurity.Authorization, Microsoft.Samples.ReportingServices.CustomSecurity" >
+		<Extension Name="Forms" Type="BancPac.ReportingServices.BP360.Authorization, BancPac.ReportingServices.BP360" >
 		<Configuration>
 			<AdminConfiguration>
 				<UserName>username</UserName>
@@ -110,7 +110,7 @@ Modify files in the ReportServer Folder
 	```
 	```xml
 	<Authentication>
-		<Extension Name="Forms" Type="Microsoft.Samples.ReportingServices.CustomSecurity.AuthenticationExtension,Microsoft.Samples.ReportingServices.CustomSecurity" />
+		<Extension Name="Forms" Type="BancPac.ReportingServices.BP360.AuthenticationExtension,BancPac.ReportingServices.BP360" />
 	</Authentication> 
 	```
 	
@@ -132,7 +132,7 @@ To modify the RSSrvPolicy.config file
 	<IMembershipCondition 
 		class="UrlMembershipCondition"
 		version="1"
-		Url="C:\Program Files\Microsoft Power BI Report Server\PBIRS\ReportServer\bin\Microsoft.Samples.ReportingServices.CustomSecurity.dll"/>
+		Url="C:\Program Files\Microsoft Power BI Report Server\PBIRS\ReportServer\bin\BancPac.ReportingServices.BP360.dll"/>
 	</CodeGroup>
 	```
 Note: 

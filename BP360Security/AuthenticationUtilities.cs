@@ -108,7 +108,24 @@ namespace BancPac.ReportingServices.BP360
          }
       }
 
-      // Method that indicates whether 
+      // Returns true if the username exists in the UserAccounts store.
+      // Used by UILogon to confirm the account exists before verifying the password.
+      internal static bool VerifyUser(string userName)
+      {
+         using (SqlConnection conn = new SqlConnection(Properties.Settings.Default.Database_ConnectionString))
+         {
+            SqlCommand cmd = new SqlCommand("LookupUser", conn);
+            cmd.CommandType = CommandType.StoredProcedure;
+            cmd.Parameters.Add("@userName", SqlDbType.VarChar, 255).Value = userName;
+            conn.Open();
+            using (SqlDataReader reader = cmd.ExecuteReader())
+            {
+               return reader.Read();
+            }
+         }
+      }
+
+      // Method that indicates whether
       // the supplied username and password are valid
       [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2201:DoNotRaiseReservedExceptionTypes"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:DisposeObjectsBeforeLosingScope")]
       internal static bool VerifyPassword(string suppliedUserName,

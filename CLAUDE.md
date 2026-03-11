@@ -111,6 +111,34 @@ The BancPac WPF client connects to SSRS via `UILogon.aspx`. Reference implementa
 
 **No IIS required**: SSRS 2019 Native Mode self-hosts both endpoints via HTTP.sys (URL reservations managed by Reporting Services Configuration Manager). IIS is only needed if a separate front-end proxy application is added.
 
+## Documentation Maintenance
+
+**Markdown docs must be reviewed and updated before every commit.** Doc updates go in the same commit as the code change — never as a separate afterthought.
+
+### Files to check on every commit
+
+| File | Update when... |
+|------|---------------|
+| `CLAUDE.md` — Scripts table | A script is added, removed, renamed, or its purpose changes |
+| `CLAUDE.md` — Architecture Overview | A new component, endpoint, or auth flow is added or changed |
+| `BP360Security/README.md` | Deployment steps, config file locations, or component behavior changes |
+| `BP360Security/DEPLOYMENT-SSRS2019.md` | Deploy/rollback/test procedure changes; new smoke test steps |
+| `WpfAuthHelper/INTEGRATION_GUIDE.md` | UILogon endpoint path, auth flow, or WPF integration approach changes |
+| `README.md` (root) | Project-level overview, repo structure, or onboarding steps change |
+
+### What triggers a doc update
+
+- **New script**: add a row to the Scripts table in `CLAUDE.md`
+- **New endpoint or API change**: update Architecture Overview and `DEPLOYMENT-SSRS2019.md`
+- **Config key added/changed**: update all files that describe that key (README, DEPLOYMENT guide, CLAUDE.md)
+- **Auth flow change**: update Architecture Overview and `WpfAuthHelper/INTEGRATION_GUIDE.md`
+- **New hard rule or constraint**: add to Hard Rules below
+- **User store or DB schema change**: update `BP360Security/README.md` and `DEPLOYMENT-SSRS2019.md`
+
+### How to verify
+
+Before `git commit`, ask: "If someone cloned this repo right now and followed the docs, would they be able to deploy and test successfully?" If the answer is no, update the docs first.
+
 ## Hard Rules
 
 1. **Report paths**: always fetched from DB by `reportId`; never trust browser input for ssrsPath.

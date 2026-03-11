@@ -247,6 +247,26 @@ if ($null -eq $authzEl.SelectSingleNode("deny[@users='?']")) {
 }
 Write-Host '  authorization -> deny anonymous users' -ForegroundColor Green
 
+# 3b2. Allow unauthenticated access to UILogon.aspx (server-to-server login endpoint)
+#      Without this <location> block, Forms Auth would redirect UILogon.aspx requests
+#      to logon.aspx before the extension can process them.
+$uiLogonLocation = $rwc.SelectSingleNode("configuration/location[@path='UILogon.aspx']")
+if ($null -eq $uiLogonLocation) {
+    $locEl   = $rwc.CreateElement('location')
+    $locEl.SetAttribute('path', 'UILogon.aspx')
+    $swLocEl = $rwc.CreateElement('system.web')
+    $azLocEl = $rwc.CreateElement('authorization')
+    $allowEl = $rwc.CreateElement('allow')
+    $allowEl.SetAttribute('users', '*')
+    $azLocEl.AppendChild($allowEl) | Out-Null
+    $swLocEl.AppendChild($azLocEl) | Out-Null
+    $locEl.AppendChild($swLocEl)   | Out-Null
+    $rwc.DocumentElement.AppendChild($locEl) | Out-Null
+    Write-Host '  location UILogon.aspx -> allow all users (Forms Auth exemption)' -ForegroundColor Green
+} else {
+    Write-Host '  location UILogon.aspx already present' -ForegroundColor Gray
+}
+
 # 3c. Identity impersonate -> false
 $identEl = $sw.SelectSingleNode('identity')
 if ($null -eq $identEl) {

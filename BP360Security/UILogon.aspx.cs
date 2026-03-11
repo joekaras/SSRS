@@ -64,10 +64,11 @@ namespace BancPac.ReportingServices.BP360
                 return;
             }
 
-            // Resolve configured keys. Keys live in the DLL's .config appSettings
-            // so they can be rotated without recompiling.
-            string key1 = ConfigurationManager.AppSettings["UILogon.Key1"] ?? string.Empty;
-            string key2 = ConfigurationManager.AppSettings["UILogon.Key2"] ?? string.Empty;
+            // Resolve configured keys from the DLL's own .config file.
+            // ConfigurationManager.AppSettings reads web.config in the SSRS web app
+            // context; UILogon keys are stored in the DLL.config and must be opened explicitly.
+            string key1 = ReadDllAppSetting("UILogon.Key1");
+            string key2 = ReadDllAppSetting("UILogon.Key2");
 
             if (string.IsNullOrEmpty(key1) && string.IsNullOrEmpty(key2))
             {
@@ -159,6 +160,25 @@ namespace BancPac.ReportingServices.BP360
             for (int i = 0; i < len; i++)
                 diff |= a[i] ^ b[i];
             return diff == 0;
+        }
+
+        private static string ReadDllAppSetting(string key)
+        {
+            try
+            {
+                string cfgPath = System.IO.Path.Combine(
+                    HttpRuntime.BinDirectory,
+                    "BancPac.ReportingServices.BP360.dll.config");
+                if (!System.IO.File.Exists(cfgPath)) return string.Empty;
+                var map = new System.Configuration.ExeConfigurationFileMap { ExeConfigFilename = cfgPath };
+                var cfg = ConfigurationManager.OpenMappedExeConfiguration(
+                    map, System.Configuration.ConfigurationUserLevel.None);
+                return cfg.AppSettings.Settings[key]?.Value ?? string.Empty;
+            }
+            catch
+            {
+                return string.Empty;
+            }
         }
 
         private void Deny(string reason)

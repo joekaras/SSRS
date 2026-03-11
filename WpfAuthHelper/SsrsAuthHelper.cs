@@ -13,7 +13,7 @@
 // -------------------------------------------------------------------------
 //   var helper = new SsrsAuthHelper(
 //       ssrsBaseUrl : "http://vmlenovo/ReportServer",
-//       uiLogonPath : "/ReportServer/UILogon.aspx",
+//       uiLogonPath : "/logon.aspx",             // logon.aspx hosts the UILogon API (loginUrl = always reachable)
 //       key         : "YOUR_KEY_FROM_CONFIG");   // UILogon.Key1 or Key2
 //
 //   await helper.LoginAsync(webView, uid, pwd, bnbr);

@@ -72,24 +72,33 @@ function Register-User {
     
     Write-Host "  Registering user: $UserName" -ForegroundColor Gray
     
+    # Use IF NOT EXISTS to handle duplicates gracefully (RegisterUser has no upsert logic)
     $query = @"
-EXEC RegisterUser @userName = N'$UserName', @passwordHash = N'$passwordHash', @salt = N'$salt'
+IF EXISTS (SELECT 1 FROM Users WHERE UserName = N'$UserName')
+    PRINT 'User already exists: $UserName'
+ELSE
+    EXEC RegisterUser @userName = N'$UserName', @passwordHash = N'$passwordHash', @salt = N'$salt'
 "@
-    
+
     try {
         if ($UseIntegratedAuth) {
-            sqlcmd -S $SqlServer -d $Database -E -Q $query -b | Out-Null
+            $output = sqlcmd -S $SqlServer -d $Database -E -Q $query -b 2>&1
         } else {
             # SQL auth would require -U and -P parameters
             Write-Error "SQL authentication not yet implemented. Use -Integrated flag."
             return $false
         }
-        
+
         if ($LASTEXITCODE -eq 0) {
-            Write-Host "  OK User registered: $UserName" -ForegroundColor Green
+            if ($output -match 'already exists') {
+                Write-Host "  -- User already exists: $UserName (skipped)" -ForegroundColor Gray
+            } else {
+                Write-Host "  OK User registered: $UserName" -ForegroundColor Green
+            }
             return $true
         } else {
             Write-Warning "Failed to register user: $UserName (sqlcmd exit code: $LASTEXITCODE)"
+            if ($output) { Write-Warning "  Output: $output" }
             return $false
         }
     }

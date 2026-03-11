@@ -10,7 +10,7 @@
 
 param(
     [string]$BaseUrl    = '',        # auto-detected from Environment.ps1 (ReportServer URL)
-    [string]$LogonPath  = '/ReportServer/UILogon.aspx',
+    [string]$LogonPath  = '/logon.aspx',     # logon.aspx is the loginUrl so always accessible; UILogon API is embedded in it
     [string]$UID,
     [string]$PWD,
     [string]$BNBR       = '004',
@@ -152,11 +152,23 @@ Write-Host ''
 Write-Host "  Body: $body" -ForegroundColor Gray
 
 # ---------------------------------------------------------------------------
-# Check cookie file for sqlAuthCookie
+# Check for sqlAuthCookie — first in Set-Cookie headers, then in cookie file
 # ---------------------------------------------------------------------------
 Write-Host ''
 $authCookieFound = $false
-if (Test-Path $cookieFile) {
+
+# Primary check: parse Set-Cookie headers from response (most reliable)
+foreach ($sc in $setCookies) {
+    if ($sc -match 'sqlAuthCookie=([^;]+)') {
+        $cookieVal = $Matches[1]
+        $preview   = if ($cookieVal.Length -gt 40) { $cookieVal.Substring(0, 40) + '...' } else { $cookieVal }
+        Write-Host "  sqlAuthCookie captured ($($cookieVal.Length) chars): $preview" -ForegroundColor Green
+        $authCookieFound = $true
+    }
+}
+
+# Fallback check: curl cookie jar file
+if (-not $authCookieFound -and (Test-Path $cookieFile)) {
     $cookieLines = Get-Content $cookieFile | Where-Object { $_ -notmatch '^#' -and $_ -match 'sqlAuthCookie' }
     if ($cookieLines) {
         $authCookieFound = $true
@@ -164,11 +176,11 @@ if (Test-Path $cookieFile) {
             $parts = $line -split '\t'
             $cookieVal = $parts[-1]
             $preview   = if ($cookieVal.Length -gt 40) { $cookieVal.Substring(0, 40) + '...' } else { $cookieVal }
-            Write-Host "  sqlAuthCookie captured ($($cookieVal.Length) chars): $preview" -ForegroundColor Green
+            Write-Host "  sqlAuthCookie captured (cookie jar, $($cookieVal.Length) chars): $preview" -ForegroundColor Green
         }
     }
-    Remove-Item $cookieFile -ErrorAction SilentlyContinue
 }
+Remove-Item $cookieFile -ErrorAction SilentlyContinue
 
 # ---------------------------------------------------------------------------
 # Result

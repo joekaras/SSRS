@@ -38,6 +38,7 @@ $dllName        = 'BancPac.ReportingServices.BP360.dll'
 $pdbName        = 'BancPac.ReportingServices.BP360.pdb'
 $builtDll       = Join-Path $repoRoot "bin\Release\$dllName"
 $builtPdb       = Join-Path $repoRoot "bin\Release\$pdbName"
+$builtDllConfig = Join-Path $repoRoot "bin\Release\$dllName.config"
 $rsDir          = Join-Path $SsrsRoot 'SSRS\ReportServer'
 $rssBinDir      = Join-Path $rsDir 'bin'
 $portalDir      = Join-Path $SsrsRoot 'SSRS\Portal'
@@ -192,6 +193,28 @@ if (Test-Path $logonSrc) {
     Write-Host "  ReportServer\Logon.aspx" -ForegroundColor Green
 } else {
     Write-Warning "Logon.aspx not found at $logonSrc"
+}
+
+$uiLogonSrc = Join-Path $repoRoot 'UILogon.aspx'
+if (Test-Path $uiLogonSrc) {
+    Copy-Item $uiLogonSrc -Destination $rsDir -Force
+    Write-Host "  ReportServer\UILogon.aspx" -ForegroundColor Green
+} else {
+    Write-Warning "UILogon.aspx not found at $uiLogonSrc"
+}
+
+# Copy dll.config so Configure-CustomSecurity.ps1 can patch UILogon keys into it
+# Only copy if a dll.config doesn't already exist in the bin dir (preserve existing keys)
+$dllConfigDst = Join-Path $rssBinDir "$dllName.config"
+if (-not (Test-Path $dllConfigDst)) {
+    if (Test-Path $builtDllConfig) {
+        Copy-Item $builtDllConfig -Destination $dllConfigDst -Force
+        Write-Host "  ReportServer\bin\$dllName.config (initial copy)" -ForegroundColor Green
+    } else {
+        Write-Warning "$dllName.config not found in build output — UILogon keys will not be configured"
+    }
+} else {
+    Write-Host "  ReportServer\bin\$dllName.config (exists — skipped to preserve keys)" -ForegroundColor Gray
 }
 
 # ---------------------------------------------------------------------------

@@ -7,6 +7,7 @@
 #   ReportServer\web.config — Forms auth, machineKey, identity
 #   rssrvpolicy.config     — FullTrust CodeGroup for custom DLL
 #   Portal\RSPortal.exe.config — machineKey (critical for SSRS 2016+)
+#   ReportServer\bin\BancPac.ReportingServices.BP360.dll.config — UILogon shared keys
 #
 # Optionally grants service account file permissions and starts SSRS.
 
@@ -91,7 +92,7 @@ function New-HexString {
 # ---------------------------------------------------------------------------
 # Step 1: Machine keys
 # ---------------------------------------------------------------------------
-Write-Host '[1/6] Machine keys' -ForegroundColor Yellow
+Write-Host '[1/7] Machine keys' -ForegroundColor Yellow
 
 if ([string]::IsNullOrWhiteSpace($ValidationKey)) {
     $ValidationKey = New-HexString -ByteLength 64   # 128 hex chars
@@ -120,7 +121,7 @@ Write-Host "  Keys saved to: $keyFile" -ForegroundColor Green
 # ---------------------------------------------------------------------------
 # Step 2: rsreportserver.config
 # ---------------------------------------------------------------------------
-Write-Host '[2/6] Patching rsreportserver.config' -ForegroundColor Yellow
+Write-Host '[2/7] Patching rsreportserver.config' -ForegroundColor Yellow
 
 [xml]$rsCfg = Get-Content $rsConfig -Raw
 
@@ -210,7 +211,7 @@ Write-Host "  Saved: $rsConfig" -ForegroundColor Green
 # ---------------------------------------------------------------------------
 # Step 3: ReportServer web.config
 # ---------------------------------------------------------------------------
-Write-Host '[3/6] Patching ReportServer web.config' -ForegroundColor Yellow
+Write-Host '[3/7] Patching ReportServer web.config' -ForegroundColor Yellow
 
 [xml]$rwc = Get-Content $rsWebConfig -Raw
 $sw = $rwc.SelectSingleNode('//configuration/system.web')
@@ -272,7 +273,7 @@ Write-Host "  Saved: $rsWebConfig" -ForegroundColor Green
 # ---------------------------------------------------------------------------
 # Step 4: rssrvpolicy.config — FullTrust CodeGroup for the DLL
 # ---------------------------------------------------------------------------
-Write-Host '[4/6] Patching rssrvpolicy.config' -ForegroundColor Yellow
+Write-Host '[4/7] Patching rssrvpolicy.config' -ForegroundColor Yellow
 
 [xml]$rsp = Get-Content $rsPolicyConfig -Raw
 
@@ -311,7 +312,7 @@ if ($null -eq $targetGroup) {
 # ---------------------------------------------------------------------------
 # Step 5: RSPortal.exe.config — machineKey (SSRS 2016+ CRITICAL)
 # ---------------------------------------------------------------------------
-Write-Host '[5/6] Patching RSPortal.exe.config' -ForegroundColor Yellow
+Write-Host '[5/7] Patching RSPortal.exe.config' -ForegroundColor Yellow
 
 if (-not (Test-Path $portalConfig)) {
     Write-Warning "Portal config not found: $portalConfig"
@@ -337,9 +338,63 @@ if (-not (Test-Path $portalConfig)) {
 }
 
 # ---------------------------------------------------------------------------
-# Step 6: Service account file permissions
+# Step 6: DLL config — UILogon shared keys
+# Existing keys are NOT overwritten so deployed WPF clients keep working.
+# New keys are generated only if the entry is missing.
 # ---------------------------------------------------------------------------
-Write-Host '[6/6] Setting file permissions for service account' -ForegroundColor Yellow
+Write-Host '[6/7] Patching DLL config with UILogon keys' -ForegroundColor Yellow
+
+$dllConfigPath = Join-Path $rsDir "bin\BancPac.ReportingServices.BP360.dll.config"
+if (-not (Test-Path $dllConfigPath)) {
+    Write-Warning "DLL config not found: $dllConfigPath — skipping UILogon key setup"
+} else {
+    [xml]$dllCfg = Get-Content $dllConfigPath -Raw -Encoding UTF8
+
+    $cfgRoot = $dllCfg.SelectSingleNode('//configuration')
+    if ($null -eq $cfgRoot) { Write-Error '<configuration> not found in dll.config'; exit 1 }
+
+    $appSettings = $dllCfg.SelectSingleNode('//configuration/appSettings')
+    if ($null -eq $appSettings) {
+        $appSettings = $dllCfg.CreateElement('appSettings')
+        $cfgRoot.AppendChild($appSettings) | Out-Null
+    }
+
+    $newKeys = @{}
+    foreach ($keyName in @('UILogon.Key1', 'UILogon.Key2')) {
+        $existing = $appSettings.SelectSingleNode("add[@key='$keyName']")
+        if ($existing) {
+            Write-Host "  $keyName already configured (not overwritten)" -ForegroundColor Gray
+            $newKeys[$keyName] = $existing.GetAttribute('value')
+        } else {
+            $keyVal = New-HexString -ByteLength 32   # 64-char hex key
+            $addEl = $dllCfg.CreateElement('add')
+            $addEl.SetAttribute('key',   $keyName)
+            $addEl.SetAttribute('value', $keyVal)
+            $appSettings.AppendChild($addEl) | Out-Null
+            $newKeys[$keyName] = $keyVal
+            Write-Host "  $keyName generated" -ForegroundColor Green
+        }
+    }
+
+    Save-Xml -Doc $dllCfg -Path $dllConfigPath
+    Write-Host "  Saved: $dllConfigPath" -ForegroundColor Green
+
+    # Append UILogon keys to the key file so the admin can configure WPF clients
+    if (Test-Path $keyFile) {
+        @"
+
+UILogon keys (use one of these as UILogon.Key in WPF App.config):
+  UILogon.Key1 = $($newKeys['UILogon.Key1'])
+  UILogon.Key2 = $($newKeys['UILogon.Key2'])
+"@ | Add-Content -Path $keyFile -Encoding UTF8
+    }
+    Write-Host "  Keys appended to: $keyFile" -ForegroundColor Green
+}
+
+# ---------------------------------------------------------------------------
+# Step 7: Service account file permissions
+# ---------------------------------------------------------------------------
+Write-Host '[7/7] Setting file permissions for service account' -ForegroundColor Yellow
 
 if ([string]::IsNullOrWhiteSpace($ServiceAccount)) {
     Write-Warning 'No service account specified — skipping file permissions'

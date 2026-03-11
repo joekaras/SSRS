@@ -223,17 +223,33 @@ Write-Host '[8/8] Register users' -ForegroundColor Yellow
 
 $setupScript = Join-Path $PSScriptRoot 'Setup-Users.ps1'
 if (Test-Path $setupScript) {
-    Write-Host 'Create default test users (testuser, admin, report_viewer)? [Y/N, default Y]: ' -ForegroundColor Yellow -NoNewline
+    # 8a — direct-login test users (logon.aspx)
+    Write-Host 'Create direct-login test users (testuser, admin, report_viewer)? [Y/N, default Y]: ' -ForegroundColor Yellow -NoNewline
     $resp = Read-Host
     if ($resp -notmatch '^[Nn]') {
         & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $setupScript -CreateTestUsers -Integrated -SqlServer $SqlServer
         if ($LASTEXITCODE -eq 0) {
-            Write-Host '  Test users created: testuser/Test@123, admin/Admin@123, report_viewer/Viewer@123' -ForegroundColor Green
+            Write-Host '  Direct-login users: testuser/Test@123, admin/Admin@123, report_viewer/Viewer@123' -ForegroundColor Green
         } else {
-            Write-Warning 'Failed to create test users. Run manually: .\scripts\Setup-Users.ps1 -CreateTestUsers -Integrated'
+            Write-Warning 'Failed to create direct-login test users. Run manually: .\scripts\Setup-Users.ps1 -CreateTestUsers -Integrated'
         }
     } else {
-        Write-Host '  Skipped. Run: .\scripts\Setup-Users.ps1 -UserName "x" -Password "y" -Integrated' -ForegroundColor Gray
+        Write-Host '  Skipped direct-login users.' -ForegroundColor Gray
+    }
+
+    # 8b — bank-scoped test users (UILogon.aspx / Key1 flow)
+    Write-Host ''
+    Write-Host 'Create bank-scoped test users for UILogon (BNBR=004)? [Y/N, default Y]: ' -ForegroundColor Yellow -NoNewline
+    $resp2 = Read-Host
+    if ($resp2 -notmatch '^[Nn]') {
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $setupScript -CreateBankTestUsers -BankNumber '004' -Integrated -SqlServer $SqlServer
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host '  Bank-scoped users: UID=testuser/Test@123, UID=admin/Admin@123, UID=report_viewer/Viewer@123 (BNBR=004)' -ForegroundColor Green
+        } else {
+            Write-Warning 'Failed to create bank-scoped test users. Run manually: .\scripts\Setup-Users.ps1 -CreateBankTestUsers -BankNumber 004 -Integrated'
+        }
+    } else {
+        Write-Host '  Skipped bank-scoped users.' -ForegroundColor Gray
     }
 } else {
     Write-Warning "Setup-Users.ps1 not found at $setupScript"
@@ -249,5 +265,7 @@ Write-Host ''
 Write-Host 'Next steps:' -ForegroundColor Cyan
 Write-Host "  1. Open browser: $($_prof.PortalUrl)" -ForegroundColor White
 Write-Host '  2. Log in with a registered user account' -ForegroundColor White
-Write-Host "  3. Check logs if issues: $SsrsRoot\SSRS\LogFiles\RSPortal_*.log" -ForegroundColor White
+Write-Host '  3. Test UILogon (WPF/server-to-server):' -ForegroundColor White
+Write-Host '       .\scripts\Test-UILogon.ps1 -UID testuser -PWD Test@123 -BNBR 004' -ForegroundColor Gray
+Write-Host "  4. Check logs if issues: $SsrsRoot\SSRS\LogFiles\RSPortal_*.log" -ForegroundColor White
 Write-Host '================================================' -ForegroundColor Cyan

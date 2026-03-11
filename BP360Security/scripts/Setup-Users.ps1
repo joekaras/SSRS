@@ -3,11 +3,13 @@
 # Registers users in the UserAccounts database for custom security authentication.
 
 param(
-    [string]$SqlServer = '',   # auto-detected from Environment.ps1
-    [string]$Database  = 'UserAccounts',
+    [string]$SqlServer   = '',    # auto-detected from Environment.ps1
+    [string]$Database    = 'UserAccounts',
     [string]$UserName,
     [string]$Password,
+    [string]$BankNumber  = '004', # bank prefix for UILogon.Key1 users (BNBR-UID format)
     [switch]$CreateTestUsers,
+    [switch]$CreateBankTestUsers, # create bank-scoped users: BNBR-testuser, BNBR-admin, etc.
     [switch]$Integrated
 )
 
@@ -123,15 +125,15 @@ $successCount = 0
 $failCount = 0
 
 if ($CreateTestUsers) {
-    Write-Host 'Creating default test users...' -ForegroundColor Yellow
+    Write-Host 'Creating default test users (direct login via logon.aspx)...' -ForegroundColor Yellow
     Write-Host ''
-    
+
     $testUsers = @(
-        @{ UserName = 'testuser'; Password = 'Test@123' }
-        @{ UserName = 'admin'; Password = 'Admin@123' }
+        @{ UserName = 'testuser';      Password = 'Test@123'   }
+        @{ UserName = 'admin';         Password = 'Admin@123'  }
         @{ UserName = 'report_viewer'; Password = 'Viewer@123' }
     )
-    
+
     foreach ($user in $testUsers) {
         if (Register-User -SqlServer $SqlServer -Database $Database `
                           -UserName $user.UserName -Password $user.Password `
@@ -141,11 +143,40 @@ if ($CreateTestUsers) {
             $failCount++
         }
     }
-    
+
     Write-Host ''
-    Write-Host 'Test user credentials:' -ForegroundColor Cyan
+    Write-Host 'Test user credentials (logon.aspx):' -ForegroundColor Cyan
     foreach ($user in $testUsers) {
         Write-Host "  $($user.UserName) / $($user.Password)" -ForegroundColor Gray
+    }
+}
+
+if ($CreateBankTestUsers) {
+    Write-Host "Creating bank-scoped test users for bank $BankNumber (UILogon.Key1 flow)..." -ForegroundColor Yellow
+    Write-Host ''
+
+    # Bank-scoped username format: BNBR-UID (matches UILogon.Key1 path in UILogon.aspx)
+    $bankTestUsers = @(
+        @{ UserName = "$BankNumber-testuser";      Password = 'Test@123'   }
+        @{ UserName = "$BankNumber-admin";         Password = 'Admin@123'  }
+        @{ UserName = "$BankNumber-report_viewer"; Password = 'Viewer@123' }
+    )
+
+    foreach ($user in $bankTestUsers) {
+        if (Register-User -SqlServer $SqlServer -Database $Database `
+                          -UserName $user.UserName -Password $user.Password `
+                          -UseIntegratedAuth $Integrated) {
+            $successCount++
+        } else {
+            $failCount++
+        }
+    }
+
+    Write-Host ''
+    Write-Host "Bank-scoped test user credentials (UILogon.aspx with Key1, BNBR=$BankNumber):" -ForegroundColor Cyan
+    foreach ($user in $bankTestUsers) {
+        $uid = $user.UserName.Substring($BankNumber.Length + 1)
+        Write-Host "  UID=$uid  PWD=$($user.Password)  BNBR=$BankNumber  (stored as: $($user.UserName))" -ForegroundColor Gray
     }
 }
 elseif ($UserName -and $Password) {

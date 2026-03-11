@@ -82,21 +82,24 @@ Copy both pages (and their `.cs` code-behind files) to the ReportServer virtual 
 
 ## Step 5b: Configure UILogon shared keys
 
-Add the following to `<install>\ReportServer\bin\BancPac.ReportingServices.BP360.dll.config`
+> **If using the automated deploy script**: `Configure-CustomSecurity.ps1` handles this automatically — it generates 64-char hex keys and writes them into `dll.config` on first deploy, and does not overwrite existing keys. Skip this step.
+
+For **manual** deployments, add the following to
+`<install>\ReportServer\bin\BancPac.ReportingServices.BP360.dll.config`
 under `<appSettings>`:
 
 ```xml
 <appSettings>
-  <!-- UILogon.Key1: WPF client posts this key; username = BNBR-UID -->
-  <add key="UILogon.Key1" value="REPLACE_WITH_STRONG_RANDOM_KEY" />
-  <!-- UILogon.Key2: WPF client posts this key; username = UID only -->
-  <add key="UILogon.Key2" value="REPLACE_WITH_STRONG_RANDOM_KEY_2" />
+  <!-- UILogon.Key1: WPF client posts this key; username stored as BNBR-UID -->
+  <add key="UILogon.Key1" value="REPLACE_WITH_STRONG_RANDOM_HEX_KEY" />
+  <!-- UILogon.Key2: WPF client posts this key; username stored as UID only -->
+  <add key="UILogon.Key2" value="REPLACE_WITH_STRONG_RANDOM_HEX_KEY_2" />
 </appSettings>
 ```
 
-Generate each key with:
+Generate each key with (run twice):
 ```powershell
-[System.Web.Security.Membership]::GeneratePassword(40, 10)
+-join ((1..32) | ForEach-Object { '{0:X2}' -f (Get-Random -Maximum 256) })
 ```
 
 The same key values must be configured in the WPF client's `App.config` under `UILogon.Key`.
@@ -300,22 +303,33 @@ Use the included PowerShell script to create user accounts:
 ```powershell
 cd BP360Security
 
-# Create default test users
+# Create direct-login test users (logon.aspx)
 .\scripts\Setup-Users.ps1 -CreateTestUsers -Integrated
+
+# Create bank-scoped test users for UILogon (UILogon.aspx / Key1 flow)
+.\scripts\Setup-Users.ps1 -CreateBankTestUsers -BankNumber 004 -Integrated
 
 # Or register a single user
 .\scripts\Setup-Users.ps1 -UserName "jdoe" -Password "Pass@123" -Integrated
 ```
 
-Default test accounts created by `-CreateTestUsers`:
+**Direct-login test accounts** (`-CreateTestUsers`):
 
-| Username | Password |
-|----------|----------|
-| testuser | Test@123 |
-| admin | Admin@123 |
-| report_viewer | Viewer@123 |
+| Username | Password | Login method |
+|----------|----------|-------------|
+| testuser | Test@123 | logon.aspx |
+| admin | Admin@123 | logon.aspx |
+| report_viewer | Viewer@123 | logon.aspx |
 
-The admin username must match the `<UserName>` configured in `rsreportserver.config` Step 6b.
+**Bank-scoped test accounts** (`-CreateBankTestUsers -BankNumber 004`):
+
+| Stored username | UID posted by WPF | BNBR | Password |
+|----------------|-------------------|------|----------|
+| 004-testuser | testuser | 004 | Test@123 |
+| 004-admin | admin | 004 | Admin@123 |
+| 004-report_viewer | report_viewer | 004 | Viewer@123 |
+
+Bank-scoped usernames use the `BNBR-UID` format required by `UILogon.Key1`. The admin username must match the `<UserName>` configured in `rsreportserver.config` Step 6b.
 
 ---
 
@@ -350,6 +364,28 @@ Common errors and causes:
 | `UnauthorizedAccessException` on web.config | Service account lacks Modify — redo Step 10 |
 | `Login failed for user` | Service account not in UserAccounts DB — redo Step 2 |
 | Redirect loop on logon.aspx | `<deny users="?" />` missing from web.config |
+
+---
+
+## Step 14: Test UILogon endpoint (WPF / server-to-server)
+
+Use the included curl-based test script to verify `UILogon.aspx` issues the auth cookie:
+
+```powershell
+cd BP360Security
+.\scripts\Test-UILogon.ps1 -UID testuser -PWD Test@123 -BNBR 004
+```
+
+The script reads `UILogon.Key1` from `dll.config` automatically and prints **PASS** if `sqlAuthCookie`
+is returned, or **FAIL** with specific troubleshooting hints.
+
+To test Key2 (UID-only, no bank prefix):
+```powershell
+.\scripts\Test-UILogon.ps1 -UID testuser -PWD Test@123 -UseKey2
+```
+
+Once UILogon is confirmed working, the WPF client can use `SsrsAuthHelper` to POST credentials
+and inject the cookie into a `WebView2` control. See `WpfAuthHelper/INTEGRATION_GUIDE.md`.
 
 ---
 

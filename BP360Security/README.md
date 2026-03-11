@@ -19,14 +19,15 @@ BP360Security/
 ├── Setup/
 │   └── CreateUserStore.sql      Creates UserAccounts DB, Users table, stored procs
 ├── scripts/
-│   ├── Deploy-CustomSecurity.ps1      Full deploy (build → DB → backup → copy → configure → restart)
+│   ├── Deploy-CustomSecurity.ps1      Full deploy (build → DB → backup → copy → configure → restart → users)
 │   ├── Build-CustomSecurity.ps1       Build DLL only
-│   ├── Configure-CustomSecurity.ps1   Patch config files, set permissions, start service
+│   ├── Configure-CustomSecurity.ps1   Patch config files, set permissions, generate UILogon keys, start service
 │   ├── Backup-Config.ps1              Snapshot all config files before changes
-│   ├── Setup-Users.ps1                Register users in UserAccounts DB
+│   ├── Setup-Users.ps1                Register users in UserAccounts DB (direct and bank-scoped)
 │   ├── Environment.ps1                Server auto-detection (VMLENOVO vs VWMAZBPTESTBP360)
 │   ├── Generate-MachineKeys.ps1       Generate new MachineKey values
 │   ├── Rollback-CustomSecurity.ps1    Restore config from backup
+│   ├── Test-UILogon.ps1               curl-based smoke test for UILogon.aspx
 │   ├── SmokeTest-Logon.ps1            Quick browser test of logon.aspx
 │   ├── Test-FormsAuth.ps1             Full Forms Auth flow test
 │   ├── Test-Login.ps1                 Credential verification test
@@ -44,7 +45,7 @@ Run as Administrator on the target server:
 .\scripts\Deploy-CustomSecurity.ps1
 ```
 
-Auto-detects server, builds DLL, creates/updates UserAccounts DB, backs up configs, patches all three config files (rsreportserver.config, web.config, RSPortal.exe.config), sets file permissions, restarts SSRS, and optionally registers test users.
+Auto-detects server, builds DLL, creates/updates UserAccounts DB, backs up configs, patches all three config files (rsreportserver.config, web.config, RSPortal.exe.config), sets file permissions, auto-generates UILogon shared keys, restarts SSRS, and optionally registers test users (both direct-login and bank-scoped).
 
 For manual step-by-step instructions see `DEPLOYMENT-SSRS2019.md`.
 
@@ -91,27 +92,36 @@ On valid credentials, issues `sqlAuthCookie` and returns HTTP 200. The WPF clien
 **Required appSettings in `BancPac.ReportingServices.BP360.dll.config`:**
 ```xml
 <appSettings>
-  <add key="UILogon.Key1" value="STRONG_RANDOM_40_CHAR_KEY" />
-  <add key="UILogon.Key2" value="STRONG_RANDOM_40_CHAR_KEY_2" />
+  <add key="UILogon.Key1" value="STRONG_RANDOM_64_HEX_KEY" />
+  <add key="UILogon.Key2" value="STRONG_RANDOM_64_HEX_KEY_2" />
 </appSettings>
 ```
 
-Generate keys:
-```powershell
-[System.Web.Security.Membership]::GeneratePassword(40, 10)
-```
+`Configure-CustomSecurity.ps1` (called by `Deploy-CustomSecurity.ps1`) generates these keys automatically on first deploy and does not overwrite existing keys. The generated values are also written to a key backup file in the deploy output.
 
 ---
 
 ## User management
 
 ```powershell
-# Create default test users (testuser/Test@123, admin/Admin@123, report_viewer/Viewer@123)
+# Create direct-login test users (logon.aspx): testuser, admin, report_viewer
 .\scripts\Setup-Users.ps1 -CreateTestUsers -Integrated
+
+# Create bank-scoped test users (UILogon.aspx / Key1): 004-testuser, 004-admin, 004-report_viewer
+.\scripts\Setup-Users.ps1 -CreateBankTestUsers -BankNumber 004 -Integrated
 
 # Register a single user
 .\scripts\Setup-Users.ps1 -UserName "jdoe" -Password "Pass@123" -Integrated
 ```
+
+Bank-scoped usernames follow the format `BNBR-UID` (e.g. `004-testuser`). These are used when the WPF client POSTs with `UILogon.Key1`; the endpoint constructs the stored username as `BNBR-UID`.
+
+Test the UILogon endpoint directly with curl:
+```powershell
+.\scripts\Test-UILogon.ps1 -UID testuser -PWD Test@123 -BNBR 004
+```
+
+Reads `UILogon.Key1` from `dll.config` automatically and prints PASS/FAIL with diagnostics.
 
 Registered users are stored in the `UserAccounts` SQL database (localhost, Integrated Security).
 Password hashing: SHA1(password + Base64Salt), stored as uppercase hex.

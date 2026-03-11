@@ -7,10 +7,11 @@ Forms Authentication custom security extension for **SQL Server Reporting Servic
 | Folder | Contents |
 |--------|----------|
 | `BP360Security/` | The active extension project (.NET Framework 4.8 class library) |
-| `BP360Security/scripts/` | PowerShell scripts: build, deploy, configure, test, backup |
+| `BP360Security/scripts/` | PowerShell scripts: build, deploy, configure, test, backup, user registration |
 | `BP360Security/Setup/` | `CreateUserStore.sql` — creates the `UserAccounts` database |
 | `BP360Security/2012Extension/` | Legacy VB.NET files from the SSRS 2012 version (reference only) |
-| `WpfAuthHelper/` | Reference implementation for WPF clients using WebView2 instead of the IE WebBrowser control |
+| `WpfAuthHelper/` | `SsrsAuthHelper.cs` + sample window — WPF WebView2 integration replacing the IE WebBrowser control |
+| `WpfTestApp/` | Standalone WPF test app for validating UILogon + WebView2 cookie flow end-to-end |
 | `prompts/` | Reusable AI prompt library organized by concern |
 | `extensions/` | Microsoft SSRS extension SDK reference documentation |
 
@@ -21,7 +22,12 @@ Forms Authentication custom security extension for **SQL Server Reporting Servic
 .\BP360Security\scripts\Deploy-CustomSecurity.ps1
 ```
 
-The script auto-detects the server (`VMLENOVO` or `VWMAZBPTESTBP360`), builds the DLL, sets up the database, patches all config files, and restarts SSRS.
+The script auto-detects the server (`VMLENOVO` or `VWMAZBPTESTBP360`), builds the DLL, sets up the database, patches all config files, auto-generates UILogon shared keys, restarts SSRS, and optionally registers test users (direct-login and bank-scoped).
+
+After deploy, test the UILogon endpoint:
+```powershell
+.\BP360Security\scripts\Test-UILogon.ps1 -UID testuser -PWD Test@123 -BNBR 004
+```
 
 See `BP360Security/DEPLOYMENT-SSRS2019.md` for the full manual step-by-step guide.
 

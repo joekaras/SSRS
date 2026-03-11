@@ -82,13 +82,19 @@ The correct ASP.NET control IDs (required for any test scripts or automation):
 
 | Script | Purpose |
 |--------|---------|
-| `BP360Security/scripts/Deploy-CustomSecurity.ps1` | Full deploy: build → DB → backup → copy files → configure → restart |
+| `BP360Security/scripts/Deploy-CustomSecurity.ps1` | Full deploy: build → DB → backup → copy files → configure → restart → register users |
 | `BP360Security/scripts/Build-CustomSecurity.ps1` | Build DLL only |
-| `BP360Security/scripts/Configure-CustomSecurity.ps1` | Patch configs, set file permissions, start service |
+| `BP360Security/scripts/Configure-CustomSecurity.ps1` | Patch configs, set file permissions, auto-generate UILogon keys, start service |
 | `BP360Security/scripts/Backup-Config.ps1` | Snapshot config files before changes |
-| `BP360Security/scripts/Setup-Users.ps1` | Register users in UserAccounts DB (use `-Integrated` flag) |
+| `BP360Security/scripts/Setup-Users.ps1` | Register users — `-CreateTestUsers` (direct), `-CreateBankTestUsers -BankNumber 004` (UILogon/Key1) |
 | `BP360Security/scripts/Environment.ps1` | Server auto-detection; sourced by all other scripts |
+| `BP360Security/scripts/Generate-MachineKeys.ps1` | Generate new MachineKey values |
 | `BP360Security/scripts/Rollback-CustomSecurity.ps1` | Restore config from backup |
+| `BP360Security/scripts/Test-UILogon.ps1` | curl-based smoke test for UILogon.aspx — reads key from dll.config automatically |
+| `BP360Security/scripts/SmokeTest-Logon.ps1` | Quick browser test of logon.aspx |
+| `BP360Security/scripts/Test-FormsAuth.ps1` | Full Forms Auth cookie flow test |
+| `BP360Security/scripts/Test-Login.ps1` | Credential verification test |
+| `BP360Security/scripts/Test-SSRSEndpoints.ps1` | ReportServer / Portal endpoint connectivity check |
 | `BP360Security/Setup/CreateUserStore.sql` | Create UserAccounts DB, tables, stored procs |
 
 ## WPF Client Integration

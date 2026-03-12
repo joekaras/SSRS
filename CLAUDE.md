@@ -103,9 +103,10 @@ The BancPac WPF client connects to SSRS via `UILogon.aspx`. Reference implementa
 
 | File | Purpose |
 |------|---------|
-| `WpfAuthHelper/SsrsAuthHelper.cs` | Drop into WPF project; `LoginAsync()` handles POST + cookie injection |
+| `WpfAuthHelper/SsrsAuthHelper.cs` | Drop into WPF project; `LoginAsync()` handles POST + cookie injection into WebView2 |
+| `WpfAuthHelper/SsrsEdgeLauncher.cs` | `LaunchAsync()` opens Edge/default browser with pre-authenticated SSRS session via one-shot trampoline |
 | `WpfAuthHelper/SsrsWebView2Window.xaml/cs` | Sample WPF window with login panel + WebView2 |
-| `WpfAuthHelper/INTEGRATION_GUIDE.md` | NuGet packages, config keys, auth flow diagram |
+| `WpfAuthHelper/INTEGRATION_GUIDE.md` | NuGet packages, config keys, auth flow diagrams (embedded + external browser) |
 
 **NuGet required in WPF project**: `Microsoft.Web.WebView2` (≥ 1.0.2210)
 

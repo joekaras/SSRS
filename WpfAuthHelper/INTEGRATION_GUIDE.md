@@ -1,4 +1,68 @@
-# WPF + WebView2 SSRS Integration Guide
+# WPF + SSRS Integration Guide
+
+Two integration modes are available:
+
+| Mode | Class | When to use |
+|------|-------|-------------|
+| Embedded browser (in-process) | `SsrsAuthHelper` + `SsrsWebView2Window` | Report viewer embedded inside the WPF window |
+| External browser launch | `SsrsEdgeLauncher` | Open Edge/default browser with a pre-authenticated SSRS session |
+
+---
+
+## External Browser Launch (`SsrsEdgeLauncher`)
+
+Authenticates the user and opens Edge (or the default browser) already logged in
+to SSRS — no WebView2 or cookie injection needed.
+
+### How it works
+
+```
+WPF App
+  |-- starts HttpListener on http://127.0.0.1:<random-port>/
+  |-- launches Edge to that URL
+  |
+  v
+Edge loads trampoline page (served from 127.0.0.1)
+  |-- auto-submits hidden form POST → UILogon.aspx?ReturnUrl=/Reports
+  |
+  v
+UILogon.aspx (SSRS server)
+  |-- validates UID / PWD / BNBR / KEY
+  |-- FormsAuthentication.SetAuthCookie()  ← sets sqlAuthCookie in Edge's cookie store
+  |-- 302 redirect → /Reports
+  |
+  v
+Edge navigates to /Reports (already authenticated)
+```
+
+The local listener serves exactly one request and then shuts down.
+
+### Usage
+
+```csharp
+var launcher = new SsrsEdgeLauncher(
+    ssrsBaseUrl : "http://vmlenovo",
+    uiLogonPath : "/ReportServer/UILogon.aspx",
+    key         : Settings.Default.UILogonKey,  // from protected config
+    returnPath  : "/Reports");                  // relative path only
+
+await launcher.LaunchAsync(uid, password, bnbr);
+```
+
+**`returnPath`** must be a relative URL (starts with `/`). UILogon.aspx rejects
+absolute URLs to prevent open redirects.
+
+**`bnbr`** must be non-empty even when using Key2 (UID-only) — pass `"000"` as a
+placeholder if your flow has no bank number.
+
+### No extra NuGet packages required
+
+`SsrsEdgeLauncher` uses only BCL types (`HttpListener`, `Process`, `TcpListener`).
+It targets .NET Framework 4.8.
+
+---
+
+## Embedded WebView2 (`SsrsAuthHelper` + `SsrsWebView2Window`)
 
 Replaces the old `WebBrowser` (IE/Trident) control with `WebView2` (Chromium/Edge),
 eliminating the need for Edge IE-compatibility mode.

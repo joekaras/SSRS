@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -26,6 +27,16 @@ namespace WpfTestApp
         // ----------------------------------------------------------------
         private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
+            // Pre-fill fields from App.config appSettings.
+            var cfg = ConfigurationManager.AppSettings;
+            if (!string.IsNullOrEmpty(cfg["SSRS.BaseUrl"]))     TxtBaseUrl.Text      = cfg["SSRS.BaseUrl"];
+            if (!string.IsNullOrEmpty(cfg["SSRS.UILogonPath"])) TxtUILogonPath.Text  = cfg["SSRS.UILogonPath"];
+            if (!string.IsNullOrEmpty(cfg["SSRS.ReportUrl"]))   TxtReportUrl.Text    = cfg["SSRS.ReportUrl"];
+            if (!string.IsNullOrEmpty(cfg["SSRS.UID"]))         TxtUid.Text          = cfg["SSRS.UID"];
+            if (!string.IsNullOrEmpty(cfg["SSRS.BNBR"]))        TxtBnbr.Text         = cfg["SSRS.BNBR"];
+            if (!string.IsNullOrEmpty(cfg["UILogon.Key"]))      TxtKey.Password       = cfg["UILogon.Key"];
+            if (!string.IsNullOrEmpty(cfg["SSRS.PWD"]))         TxtPwd.Password       = cfg["SSRS.PWD"];
+
             Log("Initializing WebView2...");
             try
             {
@@ -194,6 +205,36 @@ namespace WpfTestApp
             bool ok = await RunStep1();
             if (ok) await RunStep2();
             Log("=== Full Flow End ===");
+        }
+
+        // ----------------------------------------------------------------
+        // Launch browser (Edge/default) with pre-authenticated SSRS session
+        // ----------------------------------------------------------------
+        private async void BtnLaunchBrowser_Click(object sender, RoutedEventArgs e)
+        {
+            string baseUrl   = TxtBaseUrl.Text.TrimEnd('/');
+            string logonPath = TxtUILogonPath.Text;
+            string uid       = TxtUid.Text.Trim();
+            string pwd       = TxtPwd.Password;
+            string bnbr      = TxtBnbr.Text.Trim();
+            string key       = TxtKey.Password;
+            string returnPath = new Uri(TxtReportUrl.Text).AbsolutePath;
+
+            Log($"--- Launch Browser: trampoline → UILogon.aspx → {returnPath}");
+
+            var launcher = new SsrsEdgeLauncher(baseUrl, logonPath, key, returnPath);
+            try
+            {
+                SetStatus("Launching browser with pre-authenticated session...", "#1565C0");
+                await launcher.LaunchAsync(uid, pwd, bnbr);
+                Log("    Trampoline page served — browser continuing on its own.");
+                SetStatus("Browser launched. Check Edge/default browser.", "#2E7D32");
+            }
+            catch (Exception ex)
+            {
+                Log($"    EXCEPTION: {ex.GetType().Name}: {ex.Message}");
+                SetStatus("Browser launch failed. See log.", "#C62828");
+            }
         }
 
         // ----------------------------------------------------------------

@@ -96,6 +96,8 @@ The correct ASP.NET control IDs (required for any test scripts or automation):
 | `BP360Security/scripts/Test-Login.ps1` | Credential verification test |
 | `BP360Security/scripts/Test-SSRSEndpoints.ps1` | ReportServer / Portal endpoint connectivity check |
 | `BP360Security/Setup/CreateUserStore.sql` | Create UserAccounts DB, tables, stored procs |
+| `BP360Security/scripts/Export-SSRSContent.ps1` | Migration: extract folders/reports/data sources/models from source SSRS SQL DB to ZIP package — run on source server |
+| `BP360Security/scripts/Import-SSRSContent.ps1` | Migration: upload ZIP package from Export script into SSRS 2019 via REST API — run on target server |
 
 ## WPF Client Integration
 

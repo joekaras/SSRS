@@ -57,6 +57,8 @@
                             Click="BtnStep2_Click" IsEnabled="False"/>
                     <Button x:Name="BtnFullFlow" Content="Run Full Flow (Steps 1 + 2)"
                             Click="BtnFullFlow_Click" Background="#E8F5E9"/>
+                    <Button x:Name="BtnLaunchBrowser" Content="Launch Browser (Edge/Default)"
+                            Click="BtnLaunchBrowser_Click" Background="#E3F2FD" Margin="0,4,0,0"/>
                     <Separator Margin="0,8"/>
                     <Button x:Name="BtnNavigateDirect" Content="Navigate WebView2 (no auth — test redirect)"
                             Click="BtnNavigateDirect_Click"/>

@@ -15,12 +15,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Reference Include="System.Configuration"/>
     <Reference Include="System.Net.Http"/>
   </ItemGroup>
 
   <!-- Link SsrsAuthHelper from the reference implementation folder -->
   <ItemGroup>
     <Compile Include="..\WpfAuthHelper\SsrsAuthHelper.cs" Link="SsrsAuthHelper.cs" />
+    <Compile Include="..\WpfAuthHelper\SsrsEdgeLauncher.cs" Link="SsrsEdgeLauncher.cs" />
   </ItemGroup>
 
 </Project>

@@ -92,22 +92,58 @@ Or embed the Fixed Version runtime in your installer (offline deployment).
 
 ## SSRS Server-Side Config (BP360Security DLL config)
 
-Add these two keys to `BancPac.ReportingServices.BP360.dll.config` in the
-ReportServer `bin` folder:
+### Key1 vs Key2 — when to use each
+
+UILogon.aspx supports two shared keys that select different authentication flows:
+
+| Key | Auth flow | Username stored in SSRS | When to use |
+|-----|-----------|------------------------|-------------|
+| `UILogon.Key1` | Full credential check — validates UID + PWD + BNBR against the `UserAccounts` DB | `BNBR-UID` (e.g. `532-testuser`) | WPF desktop client where the user types their password |
+| `UILogon.Key2` | Trusted caller — no password check; caller asserts the user is already authenticated | `UID` only (no bank prefix) | Server-side backend that has already authenticated the user through its own mechanism |
+
+UILogon.aspx selects the flow by checking which key value matches the `KEY` field in the POST:
+- If `KEY` matches `UILogon.Key1` → run Key1 flow (verify password, prefix username with BNBR)
+- If `KEY` matches `UILogon.Key2` → run Key2 flow (skip password, use UID as-is)
+
+**Use Key1 for the WPF test app and production WPF client.** Key2 is for a trusted server process that manages its own auth — do not give Key2 to end-user clients.
+
+### How keys are generated and where to find them
+
+`Configure-CustomSecurity.ps1` (Step 6) auto-generates both keys on first deploy using
+a cryptographically random 64-character hex string (32 random bytes):
+
+```powershell
+# From Configure-CustomSecurity.ps1 — New-HexString helper
+$bytes = New-Object byte[] 32
+[System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
+($bytes | ForEach-Object { $_.ToString('X2') }) -join ''   # → 64-char hex
+```
+
+Keys are **not overwritten on subsequent deploys** so existing WPF clients keep working.
+
+After each deploy the keys are saved to:
+```
+BP360Security/backups/MachineKey_<timestamp>.txt
+```
+Look for the `UILogon keys` section at the bottom of that file.
+
+To read the live key directly from the server:
+```powershell
+Select-Xml -Path "C:\Program Files\Microsoft SQL Server Reporting Services\SSRS\ReportServer\bin\BancPac.ReportingServices.BP360.dll.config" `
+    -XPath '//add[@key="UILogon.Key1"]' | Select-Object -ExpandProperty Node | Select-Object -ExpandProperty value
+```
+
+To rotate keys, update `dll.config` on the server and restart SSRS — then update `UILogon.Key` in the WPF `App.config`.
+
+### dll.config entries
 
 ```xml
 <appSettings>
-  <!-- UILogon shared keys. Rotate by updating config + restarting SSRS. -->
-  <!-- Key1: username is formed as BNBR-UID (bank-scoped) -->
-  <add key="UILogon.Key1" value="REPLACE_WITH_STRONG_RANDOM_KEY_1" />
-  <!-- Key2: username is just UID (no bank prefix) -->
-  <add key="UILogon.Key2" value="REPLACE_WITH_STRONG_RANDOM_KEY_2" />
+  <!-- Key1: WPF client flow — validates password, username stored as BNBR-UID -->
+  <add key="UILogon.Key1" value="REPLACE_WITH_KEY_FROM_BACKUPS_FOLDER" />
+  <!-- Key2: trusted server flow — skips password check, username stored as UID only -->
+  <add key="UILogon.Key2" value="REPLACE_WITH_KEY_FROM_BACKUPS_FOLDER" />
 </appSettings>
-```
-
-Generate keys (run in PowerShell):
-```powershell
-[System.Web.Security.Membership]::GeneratePassword(40, 10)
 ```
 
 ---
@@ -143,9 +179,8 @@ WPF App (HttpClient, AllowAutoRedirect=false)
     v
 UILogon.aspx (ReportServer virtual dir)
     |-- validates KEY against appSettings
-    |-- constructs SSRS username (BNBR-UID or UID)
-    |-- AuthenticationUtilities.VerifyUser()
-    |-- AuthenticationUtilities.VerifyPassword()
+    |     KEY matches Key1 → full flow: VerifyUser() + VerifyPassword(), username = BNBR-UID
+    |     KEY matches Key2 → trusted flow: skip password, username = UID only
     |-- FormsAuthentication.SetAuthCookie()
     |
     | HTTP 200 + Set-Cookie: sqlAuthCookie=<ticket>

@@ -41,7 +41,10 @@
       "Bash(cd \"C:\\\\Users\\\\joeka\\\\OneDrive\\\\Documents\\\\GitHub\\\\SSRS\\\\WpfTestApp\" && dotnet build WpfTestApp.csproj --configuration Release 2>&1)",
       "Bash(echo \"Computer: $COMPUTERNAME\" && whoami && powershell.exe -NoProfile -Command \"\\([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent\\(\\)\\).IsInRole\\([Security.Principal.WindowsBuiltInRole]::Administrator\\)\")",
       "Bash(cd \"C:\\\\Users\\\\joeka\\\\OneDrive\\\\Documents\\\\GitHub\\\\SSRS\\\\BP360Security\\\\scripts\" && echo \"Y\nY\nY\" | powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"Deploy-CustomSecurity.ps1\" -SkipBuild 2>&1)",
-      "Bash(cd \"C:\\\\Users\\\\joeka\\\\OneDrive\\\\Documents\\\\GitHub\\\\SSRS\\\\BP360Security\\\\scripts\" && echo \"Y\nY\nY\" | powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"Deploy-CustomSecurity.ps1\" -SkipBuild -SkipDatabase 2>&1)"
+      "Bash(cd \"C:\\\\Users\\\\joeka\\\\OneDrive\\\\Documents\\\\GitHub\\\\SSRS\\\\BP360Security\\\\scripts\" && echo \"Y\nY\nY\" | powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"Deploy-CustomSecurity.ps1\" -SkipBuild -SkipDatabase 2>&1)",
+      "Bash(cd \"C:\\\\Users\\\\joeka\\\\OneDrive\\\\Documents\\\\GitHub\\\\SSRS\\\\WpfTestApp\" && dotnet build WpfTestApp.csproj --configuration Release 2>&1 | tail -20)",
+      "Bash(cd \"C:\\\\Users\\\\joeka\\\\OneDrive\\\\Documents\\\\GitHub\\\\SSRS\\\\WpfTestApp\" && dotnet build WpfTestApp.csproj --configuration Release 2>&1 | tail -10)",
+      "Bash(cd \"C:\\\\Users\\\\joeka\\\\OneDrive\\\\Documents\\\\GitHub\\\\SSRS\\\\WpfTestApp\" && dotnet build WpfTestApp.csproj --configuration Release 2>&1 | tail -8)"
     ]
   }
 }
